@@ -490,9 +490,15 @@ clean_consolidated = function(geo_path = geopath, cleaned_df) {
 regress_counts = function(data, 
                           population,
                           yvar,
-                          sex_b) {
-    cns = colnames(data)[grep(str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|'), colnames(data))]
-    print(cns)
+                          sex_b,
+                          add_var = NULL) {
+    string_search = str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|')
+    if (!is.null(add_var)) {
+        string_search = str_replace(string_search, '\\^NDVI_\\)', str_c('^NDVI_|', add_var, ')'))
+    }
+    #print(string_search)
+    cns = colnames(data)[grep(string_search, colnames(data))]
+    #print(cns)
     form_pois = as.formula(str_c(yvar, '~', str_c(cns, collapse = '+')))
     reg_pois = glm(formula = form_pois, data= data, family = poisson(link = 'log'))
     return(reg_pois)
@@ -503,13 +509,14 @@ run_smerc_cancertype = function(data = sgg2015,
                                 population = 'n_pop_total', 
                                 yvar = "Lung_total", 
                                 sex_b = 'total', 
+                                add_var = NULL,
                                 adjust = FALSE, 
                                 ncores = 8) {
     library(parallel)
     data_df = st_drop_geometry(data)
  
     if (adjust) {
-        reg_pois = regress_counts(data_df, population = population, yvar = yvar, sex_b = sex_b)
+        reg_pois = regress_counts(data_df, population = population, yvar = yvar, sex_b = sex_b, add_var = add_var)
         pop_in = reg_pois$fitted.values
     } 
     if (!adjust) {

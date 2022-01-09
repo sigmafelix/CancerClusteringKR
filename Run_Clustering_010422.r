@@ -2,12 +2,19 @@
 ### 01/09/22
 
 source('./base_functions.R')
+options(repos = 'https://cran.seoul.go.kr')
+if (!require(pacman)) { install.packages('pacman') } 
 
-p_load(tidyverse, sf, spdep, DCluster, tmap, smerc, knitr, readxl, kableExtra, DClusterm, patchwork)
+p_load(tidyverse, sf, stars, raster, starsExtra, readxl, here, tmap, missRanger, GGally, smerc, DClusterm, kableExtra, patchwork)
 
+username = 'isong'
+basedir = sprintf('/mnt/c/Users/%s/', username)
+rdatafiles = list.files(path = str_c(basedir, 'Documents/GP/'), pattern = '*.RData', full.names = TRUE)
+geopath = str_c(basedir, "OneDrive/Data/Korea/")
 #homedir <- "/home/felix/"
-drive <- str_c(basedir, "OneDrive/NCC_Project/CancerClustering/")
-geopath <- str_c(basedir, "OneDrive/Data/Korea/")
+drive = str_c(basedir, "OneDrive/NCC_Project/CancerClustering/")
+geopath = str_c(basedir, "OneDrive/Data/Korea/")
+dbdir = drive#here::here()
 
 
 # incidence
@@ -188,12 +195,12 @@ smerc_lung_f = run_smerc_cancertype(data = covar_origin_10_consol, yvar = 'n_Lun
 smerc_stom_f = run_smerc_cancertype(data = covar_origin_10_consol, yvar = 'n_Stomach_female', sex_b = 'female', ncores = 16)
 
 
-smerc_lung_tu = run_smerc_cancertype(data = covar_origin_10_consol, pop = 'n_pop_total', yvar = 'n_Lung_total', sex_b = 'total', control_covars = FALSE, ncores = 16)
-smerc_stom_tu = run_smerc_cancertype(data = covar_origin_10_consol, pop = 'n_pop_total', yvar = 'n_Stomach_total', sex_b = 'total', control_covars = FALSE, ncores = 16)
-smerc_lung_mu = run_smerc_cancertype(data = covar_origin_10_consol, pop = 'n_pop_male', yvar = 'n_Lung_male', sex_b = 'male', control_covars = FALSE, ncores = 16)
-smerc_stom_mu = run_smerc_cancertype(data = covar_origin_10_consol, pop = 'n_pop_male', yvar = 'n_Stomach_male', sex_b = 'male', control_covars = FALSE, ncores = 16)
-smerc_lung_fu = run_smerc_cancertype(data = covar_origin_10_consol, pop = 'n_pop_female', yvar = 'n_Lung_female', sex_b = 'female', control_covars = FALSE, ncores = 16)
-smerc_stom_fu = run_smerc_cancertype(data = covar_origin_10_consol, pop = 'n_pop_female', yvar = 'n_Stomach_female', sex_b = 'female', control_covars = FALSE, ncores = 16)
+smerc_lung_tu = run_smerc_cancertype(data = covar_origin_10_consol, pop = 'n_pop_total', yvar = 'n_Lung_total', sex_b = 'total', adjust = FALSE, ncores = 16)
+smerc_stom_tu = run_smerc_cancertype(data = covar_origin_10_consol, pop = 'n_pop_total', yvar = 'n_Stomach_total', sex_b = 'total', adjust = FALSE, ncores = 16)
+smerc_lung_mu = run_smerc_cancertype(data = covar_origin_10_consol, pop = 'n_pop_male', yvar = 'n_Lung_male', sex_b = 'male', adjust = FALSE, ncores = 16)
+smerc_stom_mu = run_smerc_cancertype(data = covar_origin_10_consol, pop = 'n_pop_male', yvar = 'n_Stomach_male', sex_b = 'male', adjust = FALSE, ncores = 16)
+smerc_lung_fu = run_smerc_cancertype(data = covar_origin_10_consol, pop = 'n_pop_female', yvar = 'n_Lung_female', sex_b = 'female', adjust = FALSE, ncores = 16)
+smerc_stom_fu = run_smerc_cancertype(data = covar_origin_10_consol, pop = 'n_pop_female', yvar = 'n_Stomach_female', sex_b = 'female', adjust = FALSE, ncores = 16)
 
 
 # par(mfcol = c(1,2))
@@ -251,7 +258,7 @@ morinc_clw = mor_clw %>%
     full_join(pop_clw, by = c('sgg_cd_c' = 'sgg_cd'))
 
 
-covar_origin_10 = get_basecovar(target_year = 2010)
+#covar_origin_10 = get_basecovar(target_year = 2010)
 covar_origin_10_fc = clean_consolidated(cleaned_df = covar_origin_10) %>%
     mutate_at(.vars = vars(-geom),
               .funs = list(~ifelse(is.na(.), median(., na.rm = TRUE), .))) %>%
@@ -260,20 +267,20 @@ covar_origin_10_fc = clean_consolidated(cleaned_df = covar_origin_10) %>%
 
 # Naming: smerc_[cancertype]_[period][incidence/mortality][sex][uncontrolled]
 # Incidence (i)
-smerc_lung_3it = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_i_Lung_total_3', sex_b = 'total', ncores = 16)
-smerc_stom_3it = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_i_Stomach_total_3', sex_b = 'total', ncores = 16)
-smerc_lung_3im = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_i_Lung_male_3', sex_b = 'male', ncores = 16)
-smerc_stom_3im = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_i_Stomach_male_3', sex_b = 'male', ncores = 16)
-smerc_lung_3if = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_i_Lung_female_3', sex_b = 'female', ncores = 16)
-smerc_stom_3if = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_i_Stomach_female_3', sex_b = 'female', ncores = 16)
+smerc_lung_3it = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_i_Lung_total_3', sex_b = 'total', adjust = TRUE, ncores = 16)
+smerc_stom_3it = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_i_Stomach_total_3', sex_b = 'total', adjust = TRUE, ncores = 16)
+smerc_lung_3im = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_i_Lung_male_3', sex_b = 'male', adjust = TRUE, ncores = 16)
+smerc_stom_3im = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_i_Stomach_male_3', sex_b = 'male', adjust = TRUE, ncores = 16)
+smerc_lung_3if = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_i_Lung_female_3', sex_b = 'female', adjust = TRUE, ncores = 16)
+smerc_stom_3if = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_i_Stomach_female_3', sex_b = 'female', adjust = TRUE, ncores = 16)
 
 
-smerc_lung_3itu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_total_3', yvar = 'n_i_Lung_total_3', sex_b = 'total', control_covars = FALSE, ncores = 16)
-smerc_stom_3itu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_total_3', yvar = 'n_i_Stomach_total_3', sex_b = 'total', control_covars = FALSE, ncores = 16)
-smerc_lung_3imu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_male_3', yvar = 'n_i_Lung_male_3', sex_b = 'male', control_covars = FALSE, ncores = 16)
-smerc_stom_3imu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_male_3', yvar = 'n_i_Stomach_male_3', sex_b = 'male', control_covars = FALSE, ncores = 16)
-smerc_lung_3ifu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_female_3', yvar = 'n_i_Lung_female_3', sex_b = 'female', control_covars = FALSE, ncores = 16)
-smerc_stom_3ifu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_female_3', yvar = 'n_i_Stomach_female_3', sex_b = 'female', control_covars = FALSE, ncores = 16)
+smerc_lung_3itu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_total_3', yvar = 'n_i_Lung_total_3', sex_b = 'total', adjust = FALSE, ncores = 16)
+smerc_stom_3itu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_total_3', yvar = 'n_i_Stomach_total_3', sex_b = 'total', adjust = FALSE, ncores = 16)
+smerc_lung_3imu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_male_3', yvar = 'n_i_Lung_male_3', sex_b = 'male', adjust = FALSE, ncores = 16)
+smerc_stom_3imu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_male_3', yvar = 'n_i_Stomach_male_3', sex_b = 'male', adjust = FALSE, ncores = 16)
+smerc_lung_3ifu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_female_3', yvar = 'n_i_Lung_female_3', sex_b = 'female', adjust = FALSE, ncores = 16)
+smerc_stom_3ifu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_female_3', yvar = 'n_i_Stomach_female_3', sex_b = 'female', adjust = FALSE, ncores = 16)
 
 par(mfcol = c(1,2))
 plot(smerc_lung_3dt)
@@ -281,20 +288,20 @@ plot(smerc_lung_3dtu)
 
 
 # Mortality (d)
-smerc_lung_3dt = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_d_Lung_total_3', sex_b = 'total', ncores = 16)
-smerc_stom_3dt = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_d_Stomach_total_3', sex_b = 'total', ncores = 16)
-smerc_lung_3dm = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_d_Lung_male_3', sex_b = 'male', ncores = 16)
-smerc_stom_3dm = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_d_Stomach_male_3', sex_b = 'male', ncores = 16)
-smerc_lung_3df = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_d_Lung_female_3', sex_b = 'female', ncores = 16)
-smerc_stom_3df = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_d_Stomach_female_3', sex_b = 'female', ncores = 16)
+smerc_lung_3dt = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_d_Lung_total_3', sex_b = 'total', adjust = TRUE, ncores = 16)
+smerc_stom_3dt = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_d_Stomach_total_3', sex_b = 'total', adjust = TRUE, ncores = 16)
+smerc_lung_3dm = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_d_Lung_male_3', sex_b = 'male', adjust = TRUE, ncores = 16)
+smerc_stom_3dm = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_d_Stomach_male_3', sex_b = 'male', adjust = TRUE, ncores = 16)
+smerc_lung_3df = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_d_Lung_female_3', sex_b = 'female', adjust = TRUE, ncores = 16)
+smerc_stom_3df = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_d_Stomach_female_3', sex_b = 'female', adjust = TRUE, ncores = 16)
 
 
-smerc_lung_3dtu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_total_3', yvar = 'n_d_Lung_total_3', sex_b = 'total', control_covars = FALSE, ncores = 16)
-smerc_stom_3dtu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_total_3', yvar = 'n_d_Stomach_total_3', sex_b = 'total', control_covars = FALSE, ncores = 16)
-smerc_lung_3dmu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_male_3', yvar = 'n_d_Lung_male_3', sex_b = 'male', control_covars = FALSE, ncores = 16)
-smerc_stom_3dmu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_male_3', yvar = 'n_d_Stomach_male_3', sex_b = 'male', control_covars = FALSE, ncores = 16)
-smerc_lung_3dfu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_female_3', yvar = 'n_d_Lung_female_3', sex_b = 'female', control_covars = FALSE, ncores = 16)
-smerc_stom_3dfu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_female_3', yvar = 'n_d_Stomach_female_3', sex_b = 'female', control_covars = FALSE, ncores = 16)
+smerc_lung_3dtu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_total_3', yvar = 'n_d_Lung_total_3', sex_b = 'total', adjust = FALSE, ncores = 16)
+smerc_stom_3dtu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_total_3', yvar = 'n_d_Stomach_total_3', sex_b = 'total', adjust = FALSE, ncores = 16)
+smerc_lung_3dmu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_male_3', yvar = 'n_d_Lung_male_3', sex_b = 'male', adjust = FALSE, ncores = 16)
+smerc_stom_3dmu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_male_3', yvar = 'n_d_Stomach_male_3', sex_b = 'male', adjust = FALSE, ncores = 16)
+smerc_lung_3dfu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_female_3', yvar = 'n_d_Lung_female_3', sex_b = 'female', adjust = FALSE, ncores = 16)
+smerc_stom_3dfu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_female_3', yvar = 'n_d_Stomach_female_3', sex_b = 'female', adjust = FALSE, ncores = 16)
 
 
 tmap_smerc(covar_origin_10_fc, smerc_lung_3it)

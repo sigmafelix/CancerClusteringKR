@@ -1,22 +1,11 @@
 ### Covariate processing (generalized)
 ### 01/09/2022
 
-if (!require(pacman)) { install.packages('pacman') } 
-options(repos = 'https://cran.seoul.go.kr')
-p_load(tidyverse, sf, stars, raster, starsExtra, readxl, here, spdep, missRanger, GGally, smerc, DClusterm)
-username = 'isong'
-basedir = sprintf('/mnt/c/Users/%s/', username)
-rdatafiles = list.files(path = str_c(basedir, 'Documents/GP/'), pattern = '*.RData', full.names = TRUE)
-geopath <- str_c(basedir, "OneDrive/Data/Korea/")
-
-dbdir = here::here()
-
 # Clean covariates
 clean_covar = function(db_dir = dbdir,
                        geo_path = geopath,
                        target_year = 2010,
                        gp_base_dir = rdatafiles
-
                         ) {
 
     load(gp_base_dir[grep(target_year, gp_base_dir)])
@@ -497,26 +486,39 @@ clean_consolidated = function(geo_path = geopath, cleaned_df) {
 #    str_c('ap_sum_em_', c('co', 'nox', 'sox', 'tsp', 'pm10', 'voc', 'nh3'))
 #covar_origin_10_consol = clean_consolidated(cleaned_df = covar_origin_10)
 
+# Run estimate model (aka covariate adjustment)
+regress_counts = function(data, 
+                          population,
+                          yvar,
+                          sex_b) {
+    cns = colnames(data)[grep(str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|'), colnames(data))]
+    print(cns)
+    form_pois = as.formula(str_c(yvar, '~', str_c(cns, collapse = '+')))
+    reg_pois = glm(formula = form_pois, data= data, family = poisson(link = 'log'))
+    return(reg_pois)
+}
 
 # Run smerc elliptic.test
-run_smerc_cancertype = function(data = sgg2015, population = 'n_pop_total', yvar = "Lung_total", sex_b = 'total', control_covars = FALSE, ncores = 8) {
+run_smerc_cancertype = function(data = sgg2015, 
+                                population = 'n_pop_total', 
+                                yvar = "Lung_total", 
+                                sex_b = 'total', 
+                                adjust = FALSE, 
+                                ncores = 8) {
     library(parallel)
     data_df = st_drop_geometry(data)
  
-    if (control_covars) {
-        cns = colnames(data_df)[grep(str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|'), colnames(data_df))]
-        print(cns)
-        form_pois = as.formula(str_c(yvar, '~', str_c(cns, collapse = '+')))
-        reg_pois = glm(formula = form_pois, data= data_df, family = poisson(link = 'log'))
+    if (adjust) {
+        reg_pois = regress_counts(data_df, population = population, yvar = yvar, sex_b = sex_b)
         pop_in = reg_pois$fitted.values
     } 
-    if (!control_covars) {
+    if (!adjust) {
         pop_in = unlist(data_df[, population])       
     }
     cls = parallel::makeCluster(spec = ncores, type = 'PSOCK')
     eltest = smerc::elliptic.test(st_coordinates(st_centroid(data)), 
             cases = unlist(data_df[, yvar]), 
-            pop = reg_pois$fitted.values,
+            pop = pop_in,
             shape = c(1, 1.5, 2, 2.5, 3, 4, 5, 6),
             nangle = c(1, 4, 6, 12, 12, 12, 15, 18),
             cl = cls)
@@ -595,29 +597,29 @@ run_dclust_cancertype = function(
         ncores = 20,
         adjust = TRUE,
         run_glm = FALSE) {
-  cns = colnames(data)[grep(str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|'), colnames(data))]
-  print(cns)
-  options(mc.cores = ncores)
-  form_pois = as.formula(str_c(yvar, '~ offset(log(Expected)) +', str_c(cns, collapse = '+')))
-  if (!adjust) {
-      form_pois = as.formula(str_c(yvar, '~ offset(log(Expected)) + 1'))
-  }
-  data_df = data %>%
-    bind_cols(as.data.frame(st_coordinates(st_centroid(.)))) %>%
-    st_drop_geometry %>%
-    mutate(Expected = !!sym(population) * sum(!!sym(yvar)) / sum(!!sym(population)))
-  reg_pois = glm(formula = form_pois, data= data_df, family = poisson(link = 'log'))
-  if (run_glm) { return(reg_pois)}
+    cns = colnames(data)[grep(str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|'), colnames(data))]
+    print(cns)
+    options(mc.cores = ncores)
+    form_pois = as.formula(str_c(yvar, '~ offset(log(Expected)) +', str_c(cns, collapse = '+')))
+    if (!adjust) {
+        form_pois = as.formula(str_c(yvar, '~ offset(log(Expected)) + 1'))
+    }
+    data_df = data %>%
+        bind_cols(as.data.frame(st_coordinates(st_centroid(.)))) %>%
+        st_drop_geometry %>%
+        mutate(Expected = !!sym(population) * sum(!!sym(yvar)) / sum(!!sym(population)))
+    reg_pois = glm(formula = form_pois, data= data_df, family = poisson(link = 'log'))
+    if (run_glm) { return(reg_pois)}
   
-  eltest <- DetectClustersModel(data %>% as('Spatial'), 
-    #radius = 1000000,
-    thegrid = data_df %>% dplyr::select(X, Y), 
-    fractpop = 0.5,
-    alpha = 0.05, typeCluster = "S", 
-    R = NULL, 
-    model0 = reg_pois,
-    ClusterSizeContribution = population)
-  return(eltest)
+    eltest <- DetectClustersModel(data %>% as('Spatial'), 
+        #radius = 1000000,
+        thegrid = data_df %>% dplyr::select(X, Y), 
+        fractpop = 0.5,
+        alpha = 0.05, typeCluster = "S", 
+        R = NULL, 
+        model0 = reg_pois,
+        ClusterSizeContribution = population)
+    return(eltest)
 }
 
 

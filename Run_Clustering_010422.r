@@ -1,18 +1,13 @@
 ### Run Clustering Analysis
-### 01/04/22
+### 01/09/22
 
 source('./base_functions.R')
 
-options(repos = "https://cran.seoul.go.kr/")
-if (!require(pacman)) {
-    install.packages("pacman")
-}
 p_load(tidyverse, sf, spdep, DCluster, tmap, smerc, knitr, readxl, kableExtra, DClusterm, patchwork)
 
 #homedir <- "/home/felix/"
 drive <- str_c(basedir, "OneDrive/NCC_Project/CancerClustering/")
 geopath <- str_c(basedir, "OneDrive/Data/Korea/")
-
 
 
 # incidence
@@ -65,7 +60,7 @@ inc_cl <- inc %>%
         sgg_cd_c = plyr::mapvalues(sgg_cd, conv_table_e$fromcode, conv_table_e$tocode)
     ) %>%
     # not sum
-    pivot_wider(id_cols = c(year, sgg_cd_c, cancer_type_e, sex_e), names_from = type_inc_e, values_from = n_n, values_fn = sum) %>%
+    pivot_wider(id_cols = c(year, sgg_cd_c, cancer_type_e, sex_e), names_from = type_inc_e, values_from = n_n, values_fn = function(x) sum(x, na.rm = TRUE)) %>%
     # note that sex-specific cancers have incorrect crude rates
     left_join(pop_cl, by = c('year' = 'year_agg', 'sgg_cd_c' = 'sgg_cd', 'sex_e' = 'sex_e')) %>%
     group_by(year, sgg_cd_c, cancer_type_e, sex_e) %>%
@@ -98,7 +93,7 @@ mor_cl = bind_rows(mor_to, mor_me) %>%
            sgg_cd_c = plyr::mapvalues(sgg_cd, conv_table_e$fromcode, conv_table_e$tocode)
         ) %>%
     # not sum
-    pivot_wider(id_cols = c(year_agg, sgg_cd_c, cancer_type_e, sex_e), names_from = type_mor_e, values_from = value, values_fn = sum) %>%
+    pivot_wider(id_cols = c(year_agg, sgg_cd_c, cancer_type_e, sex_e), names_from = type_mor_e, values_from = value, values_fn = function(x) sum(x, na.rm = TRUE)) %>%
     left_join(pop_cl, by = c('year_agg' = 'year_agg', 'sgg_cd_c' = 'sgg_cd', 'sex_e' = 'sex_e')) %>%
     group_by(year_agg, sgg_cd_c, cancer_type_e, sex_e) %>%
     summarize(Ntotal = sum(N, na.rm = T),
@@ -107,7 +102,7 @@ mor_cl = bind_rows(mor_to, mor_me) %>%
     filter(year_agg %in% c('1999-2003', '2004-2008', '2009-2013'))
 
 
-
+## ggplot summary plots ####
 inc_clgg_n = inc_cl %>%
     filter(cancer_type_e %in% c('Lung', 'Stomach') & type_inc_e == 'Ntotal') %>%
     ggplot(data = .,
@@ -164,17 +159,15 @@ mor_clgg_r = mor_cl %>%
 
 
 
-inc_cl %>% 
-    dplyr::select(year, year, sgg_cd, sgg_nm) %>%
-    pivot_wider(id_cols = c(sgg_cd, sgg_nm), names_from = year, values_from = year0, values_fn = length) %>%
-    data.frame
+# inc_cl %>% 
+#     dplyr::select(year, year, sgg_cd, sgg_nm) %>%
+#     pivot_wider(id_cols = c(sgg_cd, sgg_nm), names_from = year, values_from = year0, values_fn = length) %>%
+#     data.frame
 
-mor_cl %>% 
-    dplyr::select(year_agg, value, sgg_cd, sgg_nm) %>%
-    pivot_wider(id_cols = c(sgg_cd, sgg_nm), names_from = year_agg, values_from = value, values_fn = function(x) sum(!is.na(x))) %>%
-    data.frame
-
-
+# mor_cl %>% 
+#     dplyr::select(year_agg, value, sgg_cd, sgg_nm) %>%
+#     pivot_wider(id_cols = c(sgg_cd, sgg_nm), names_from = year_agg, values_from = value, values_fn = function(x) sum(!is.na(x))) %>%
+#     data.frame
 
 covar_origin_10 = get_basecovar(target_year = 2010)
 #covar_origin_o = covar_origin_10
@@ -186,7 +179,7 @@ covar_origin_10_consol = clean_consolidated(cleaned_df = covar_origin_10) %>%
 
 
 
-### Run main code
+### Run smerc analysis code ####
 smerc_lung_t = run_smerc_cancertype(data = covar_origin_10_consol, yvar = 'n_Lung_total', sex_b = 'total', ncores = 16)
 smerc_stom_t = run_smerc_cancertype(data = covar_origin_10_consol, yvar = 'n_Stomach_total', sex_b = 'total', ncores = 16)
 smerc_lung_m = run_smerc_cancertype(data = covar_origin_10_consol, yvar = 'n_Lung_male', sex_b = 'male', ncores = 16)
@@ -195,23 +188,21 @@ smerc_lung_f = run_smerc_cancertype(data = covar_origin_10_consol, yvar = 'n_Lun
 smerc_stom_f = run_smerc_cancertype(data = covar_origin_10_consol, yvar = 'n_Stomach_female', sex_b = 'female', ncores = 16)
 
 
-smerc_lung_tu = run_smerc_cancertype_pl(data = covar_origin_10_consol, pop = 'n_pop_total', yvar = 'n_Lung_total', sex_b = 'total', ncores = 16)
-smerc_stom_tu = run_smerc_cancertype_pl(data = covar_origin_10_consol, pop = 'n_pop_total', yvar = 'n_Stomach_total', sex_b = 'total', ncores = 16)
-smerc_lung_mu = run_smerc_cancertype_pl(data = covar_origin_10_consol, pop = 'n_pop_male', yvar = 'n_Lung_male', sex_b = 'male', ncores = 16)
-smerc_stom_mu = run_smerc_cancertype_pl(data = covar_origin_10_consol, pop = 'n_pop_male', yvar = 'n_Stomach_male', sex_b = 'male', ncores = 16)
-smerc_lung_fu = run_smerc_cancertype_pl(data = covar_origin_10_consol, pop = 'n_pop_female', yvar = 'n_Lung_female', sex_b = 'female', ncores = 16)
-smerc_stom_fu = run_smerc_cancertype_pl(data = covar_origin_10_consol, pop = 'n_pop_female', yvar = 'n_Stomach_female', sex_b = 'female', ncores = 16)
+smerc_lung_tu = run_smerc_cancertype(data = covar_origin_10_consol, pop = 'n_pop_total', yvar = 'n_Lung_total', sex_b = 'total', control_covars = FALSE, ncores = 16)
+smerc_stom_tu = run_smerc_cancertype(data = covar_origin_10_consol, pop = 'n_pop_total', yvar = 'n_Stomach_total', sex_b = 'total', control_covars = FALSE, ncores = 16)
+smerc_lung_mu = run_smerc_cancertype(data = covar_origin_10_consol, pop = 'n_pop_male', yvar = 'n_Lung_male', sex_b = 'male', control_covars = FALSE, ncores = 16)
+smerc_stom_mu = run_smerc_cancertype(data = covar_origin_10_consol, pop = 'n_pop_male', yvar = 'n_Stomach_male', sex_b = 'male', control_covars = FALSE, ncores = 16)
+smerc_lung_fu = run_smerc_cancertype(data = covar_origin_10_consol, pop = 'n_pop_female', yvar = 'n_Lung_female', sex_b = 'female', control_covars = FALSE, ncores = 16)
+smerc_stom_fu = run_smerc_cancertype(data = covar_origin_10_consol, pop = 'n_pop_female', yvar = 'n_Stomach_female', sex_b = 'female', control_covars = FALSE, ncores = 16)
 
 
-par(mfcol = c(1,2))
-plot(smerc_stom_f)
-plot(smerc_stom_fu)
+# par(mfcol = c(1,2))
+# plot(smerc_stom_f)
+# plot(smerc_stom_fu)
 
-par(mfcol = c(1,2))
-plot(smerc_lung_t)
-plot(smerc_lung_tu)
-
-
+# par(mfcol = c(1,2))
+# plot(smerc_lung_t)
+# plot(smerc_lung_tu)
 
 
 ### Incidence-Mortality consolidation ####
@@ -254,16 +245,13 @@ pop_clw = pop_cl %>%
     dplyr::select(-ends_with('_NA'))
 
 
-## Joined
+## Joined mortality-incidence-population (5-year aggregated)
 morinc_clw = mor_clw %>%
     full_join(inc_clw) %>%
-    full_join(pop_clw, by = c('sgg_cd_c' = 'sgg_cd')) %>%
-    mutate(sgg_cd_c = plyr::mapvalues(sgg_cd_c, conv_table_e$fromcode, conv_table_e$tocode)) %>%
-    group_by(sgg_cd_c) %>%
-    summarize_all(list(~sum(., na.rm = TRUE))) %>%
-    ungroup
+    full_join(pop_clw, by = c('sgg_cd_c' = 'sgg_cd'))
 
 
+covar_origin_10 = get_basecovar(target_year = 2010)
 covar_origin_10_fc = clean_consolidated(cleaned_df = covar_origin_10) %>%
     mutate_at(.vars = vars(-geom),
               .funs = list(~ifelse(is.na(.), median(., na.rm = TRUE), .))) %>%
@@ -350,7 +338,8 @@ run_dclust_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yva
 run_dclust_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yvar = 'n_i_Stomach_total_3', sex_b = 'total', run_glm = TRUE)
 run_dclust_cancertype(data = covar_origin_10_fc, population = 'n_p_male_3', yvar = 'n_d_Lung_male_3', sex_b = 'male', run_glm = TRUE)
 
-# covariate_adjusted
+### Run DClusterm covariate adjusted scanning ####
+# Naming: dclust_[cancertype]_[period][incidence/mortality][sex]
 dclust_lung_3it = run_dclust_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yvar = 'n_i_Lung_total_3', sex_b = 'total')
 dclust_lung_3dt = run_dclust_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yvar = 'n_d_Lung_total_3', sex_b = 'total')
 dclust_lung_3im = run_dclust_cancertype(data = covar_origin_10_fc, population = 'n_p_male_3', yvar = 'n_i_Lung_male_3', sex_b = 'male')

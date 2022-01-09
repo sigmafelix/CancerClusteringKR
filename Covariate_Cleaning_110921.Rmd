@@ -171,15 +171,6 @@ kcdc_covars = kcdc_covars %>%
   left_join(code_conv, .) %>%
   mutate(SGIS = as.integer(SGIS))
 
-'''
-colnames(kcdc_list[[1]]) = str_c('Walking_', kcdc_cns)
-colnames(kcdc_list[[2]]) = str_c('Obesity_', kcdc_cns[-59:-63])
-colnames(kcdc_list[[3]]) = str_c('AlcoholM_', kcdc_cns)
-colnames(kcdc_list[[4]]) = str_c('PhysMid_', kcdc_cn4[-grep('2018$', kcdc_cn4)])
-colnames(kcdc_list[[5]]) = str_c('Smoking_', kcdc_cns)
-'''
-
-
 
 
 # KCDC Community Health Data

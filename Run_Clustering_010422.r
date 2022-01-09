@@ -3,8 +3,6 @@
 
 source('./base_functions.R')
 
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, error = FALSE, fig.height = 7.5)
-
 options(repos = "https://cran.seoul.go.kr/")
 if (!require(pacman)) {
     install.packages("pacman")
@@ -14,7 +12,6 @@ p_load(tidyverse, sf, spdep, DCluster, tmap, smerc, knitr, readxl, kableExtra, D
 #homedir <- "/home/felix/"
 drive <- str_c(basedir, "OneDrive/NCC_Project/CancerClustering/")
 geopath <- str_c(basedir, "OneDrive/Data/Korea/")
-
 
 
 
@@ -189,69 +186,6 @@ covar_origin_10_consol = clean_consolidated(cleaned_df = covar_origin_10) %>%
 
 
 
-run_smerc_cancertype = function(data = sgg2015, yvar = "Lung_total", sex_b = 'total', ncores = 8) {
-  library(parallel)
-  cns = colnames(data)[grep(str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|'), colnames(data))]
-  print(cns)
-  form_pois = as.formula(str_c(yvar, '~', str_c(cns, collapse = '+')))
-  reg_pois = glm(formula = form_pois, data= data, family = poisson(link = 'log'))
-  cls = parallel::makeCluster(spec = ncores, type = 'PSOCK')
-  data_df = st_drop_geometry(data)
-  eltest = smerc::elliptic.test(st_coordinates(st_centroid(data)), 
-            cases = unlist(data_df[, yvar]), 
-            pop = reg_pois$fitted.values,
-            shape = c(1, 1.5, 2, 2.5, 3, 4, 5, 6),
-            nangle = c(1, 4, 6, 12, 12, 12, 15, 18),
-            cl = cls)
-  parallel::stopCluster(cls)
-  return(eltest)
-}
-
-run_smerc_cancertype_pl = function(data = sgg2015, population = 'n_pop_total', yvar = "Lung_total", sex_b = 'total', ncores = 8) {
-  library(parallel)
-  #cns = colnames(data)[grep(str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|'), colnames(data))]
-  data_df = st_drop_geometry(data)
-  cls = parallel::makeCluster(spec = ncores, type = 'PSOCK')
-  eltest = smerc::elliptic.test(st_coordinates(st_centroid(data)), 
-            cases = unlist(data_df[, yvar]), 
-            pop = unlist(data_df[, population]),
-            shape = c(1, 1.5, 2, 2.5, 3, 4, 5, 6),
-            nangle = c(1, 4, 6, 12, 12, 12, 15, 18),
-            cl = cls)
-  parallel::stopCluster(cls)
-  return(eltest)
-}
-doParallel::stopImplicitCluster()
-
-
-# smerc cluster to general maps with a tmap object
-tmap_smerc = function(basemap, smc, threshold = 2) {
-    library(tmap)
-    basemap$cluster = NA
-    smc_ncl = sapply(smc$clusters, function(x) length(x$locids))
-    smc_ncl_addr = (smc_ncl >= threshold)
-    # p-value extraction
-    smc_pval = sapply(smc$clusters, function(x) x$pvalue)
-    smc_pval_addr = (smc_pval <= 0.05)
-    if (!is.null(threshold)) {
-        smc_pval_addr = smc_pval_addr * smc_ncl_addr
-    }
-    smc_pval_addr = grep(1, as.integer(smc_pval_addr))
-
-    # loop through
-    for (i in seq_len(length(smc_pval_addr))) {
-        cl_ilocs = smc$clusters[[smc_pval_addr[i]]]$locids
-        basemap$cluster[cl_ilocs] = i
-    }
-    basemap$cluster = as.factor(basemap$cluster)
-    # tmap
-    tm_cluster = tm_shape(basemap) +
-        tm_fill('cluster', pal = 'Set3', colorNA = 'transparent', showNA = FALSE) +
-        tm_borders(col = 'dark grey', lwd = 0.3)
-    return(tm_cluster)
-}
-
-
 ### Run main code
 smerc_lung_t = run_smerc_cancertype(data = covar_origin_10_consol, yvar = 'n_Lung_total', sex_b = 'total', ncores = 16)
 smerc_stom_t = run_smerc_cancertype(data = covar_origin_10_consol, yvar = 'n_Stomach_total', sex_b = 'total', ncores = 16)
@@ -346,12 +280,12 @@ smerc_lung_3if = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_i_Lun
 smerc_stom_3if = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_i_Stomach_female_3', sex_b = 'female', ncores = 16)
 
 
-smerc_lung_3itu = run_smerc_cancertype_pl(data = covar_origin_10_fc, pop = 'n_p_total_3', yvar = 'n_i_Lung_total_3', sex_b = 'total', ncores = 16)
-smerc_stom_3itu = run_smerc_cancertype_pl(data = covar_origin_10_fc, pop = 'n_p_total_3', yvar = 'n_i_Stomach_total_3', sex_b = 'total', ncores = 16)
-smerc_lung_3imu = run_smerc_cancertype_pl(data = covar_origin_10_fc, pop = 'n_p_male_3', yvar = 'n_i_Lung_male_3', sex_b = 'male', ncores = 16)
-smerc_stom_3imu = run_smerc_cancertype_pl(data = covar_origin_10_fc, pop = 'n_p_male_3', yvar = 'n_i_Stomach_male_3', sex_b = 'male', ncores = 16)
-smerc_lung_3ifu = run_smerc_cancertype_pl(data = covar_origin_10_fc, pop = 'n_p_female_3', yvar = 'n_i_Lung_female_3', sex_b = 'female', ncores = 16)
-smerc_stom_3ifu = run_smerc_cancertype_pl(data = covar_origin_10_fc, pop = 'n_p_female_3', yvar = 'n_i_Stomach_female_3', sex_b = 'female', ncores = 16)
+smerc_lung_3itu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_total_3', yvar = 'n_i_Lung_total_3', sex_b = 'total', control_covars = FALSE, ncores = 16)
+smerc_stom_3itu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_total_3', yvar = 'n_i_Stomach_total_3', sex_b = 'total', control_covars = FALSE, ncores = 16)
+smerc_lung_3imu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_male_3', yvar = 'n_i_Lung_male_3', sex_b = 'male', control_covars = FALSE, ncores = 16)
+smerc_stom_3imu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_male_3', yvar = 'n_i_Stomach_male_3', sex_b = 'male', control_covars = FALSE, ncores = 16)
+smerc_lung_3ifu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_female_3', yvar = 'n_i_Lung_female_3', sex_b = 'female', control_covars = FALSE, ncores = 16)
+smerc_stom_3ifu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_female_3', yvar = 'n_i_Stomach_female_3', sex_b = 'female', control_covars = FALSE, ncores = 16)
 
 par(mfcol = c(1,2))
 plot(smerc_lung_3dt)
@@ -367,12 +301,12 @@ smerc_lung_3df = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_d_Lun
 smerc_stom_3df = run_smerc_cancertype(data = covar_origin_10_fc, yvar = 'n_d_Stomach_female_3', sex_b = 'female', ncores = 16)
 
 
-smerc_lung_3dtu = run_smerc_cancertype_pl(data = covar_origin_10_fc, pop = 'n_p_total_3', yvar = 'n_d_Lung_total_3', sex_b = 'total', ncores = 16)
-smerc_stom_3dtu = run_smerc_cancertype_pl(data = covar_origin_10_fc, pop = 'n_p_total_3', yvar = 'n_d_Stomach_total_3', sex_b = 'total', ncores = 16)
-smerc_lung_3dmu = run_smerc_cancertype_pl(data = covar_origin_10_fc, pop = 'n_p_male_3', yvar = 'n_d_Lung_male_3', sex_b = 'male', ncores = 16)
-smerc_stom_3dmu = run_smerc_cancertype_pl(data = covar_origin_10_fc, pop = 'n_p_male_3', yvar = 'n_d_Stomach_male_3', sex_b = 'male', ncores = 16)
-smerc_lung_3dfu = run_smerc_cancertype_pl(data = covar_origin_10_fc, pop = 'n_p_female_3', yvar = 'n_d_Lung_female_3', sex_b = 'female', ncores = 16)
-smerc_stom_3dfu = run_smerc_cancertype_pl(data = covar_origin_10_fc, pop = 'n_p_female_3', yvar = 'n_d_Stomach_female_3', sex_b = 'female', ncores = 16)
+smerc_lung_3dtu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_total_3', yvar = 'n_d_Lung_total_3', sex_b = 'total', control_covars = FALSE, ncores = 16)
+smerc_stom_3dtu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_total_3', yvar = 'n_d_Stomach_total_3', sex_b = 'total', control_covars = FALSE, ncores = 16)
+smerc_lung_3dmu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_male_3', yvar = 'n_d_Lung_male_3', sex_b = 'male', control_covars = FALSE, ncores = 16)
+smerc_stom_3dmu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_male_3', yvar = 'n_d_Stomach_male_3', sex_b = 'male', control_covars = FALSE, ncores = 16)
+smerc_lung_3dfu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_female_3', yvar = 'n_d_Lung_female_3', sex_b = 'female', control_covars = FALSE, ncores = 16)
+smerc_stom_3dfu = run_smerc_cancertype(data = covar_origin_10_fc, pop = 'n_p_female_3', yvar = 'n_d_Stomach_female_3', sex_b = 'female', control_covars = FALSE, ncores = 16)
 
 
 tmap_smerc(covar_origin_10_fc, smerc_lung_3it)
@@ -407,40 +341,7 @@ tmap::tmap_arrange(
 )
 
 
-run_dclust_cancertype = function(
-        data, 
-        population = 'n_p_total_3', 
-        yvar = "n_d_Lung_total_3", 
-        sex_b = 'total',
-        ncores = 20,
-        adjust = TRUE,
-        run_glm = FALSE) {
-  cns = colnames(data)[grep(str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|'), colnames(data))]
-  print(cns)
-  options(mc.cores = ncores)
-  form_pois = as.formula(str_c(yvar, '~ offset(log(Expected)) +', str_c(cns, collapse = '+')))
-  if (!adjust) {
-      form_pois = as.formula(str_c(yvar, '~ offset(log(Expected)) + 1'))
-  }
-  data_df = data %>%
-    bind_cols(as.data.frame(st_coordinates(st_centroid(.)))) %>%
-    st_drop_geometry %>%
-    mutate(Expected = !!sym(population) * sum(!!sym(yvar)) / sum(!!sym(population)))
-  reg_pois = glm(formula = form_pois, data= data_df, family = poisson(link = 'log'))
-  if (run_glm) { return(reg_pois)}
-  
-  eltest <- DetectClustersModel(data %>% as('Spatial'), 
-    #radius = 1000000,
-    thegrid = data_df %>% dplyr::select(X, Y), 
-    fractpop = 0.5,
-    alpha = 0.05, typeCluster = "S", 
-    R = NULL, 
-    model0 = reg_pois,
-    ClusterSizeContribution = population)
-  return(eltest)
-}
-
-
+# Attach coordinates
 covar_origin_10_fc_df = covar_origin_10_fc %>%
     bind_cols(as.data.frame(st_coordinates(st_centroid(.)))) %>%
     st_drop_geometry
@@ -479,54 +380,6 @@ dclust_stom_3dmu = run_dclust_cancertype(data = covar_origin_10_fc, population =
 dclust_stom_3ifu = run_dclust_cancertype(data = covar_origin_10_fc, population = 'n_p_female_3', yvar = 'n_i_Stomach_female_3', sex_b = 'female', adjust = FALSE)
 dclust_stom_3dfu = run_dclust_cancertype(data = covar_origin_10_fc, population = 'n_p_female_3', yvar = 'n_d_Stomach_female_3', sex_b = 'female', adjust = FALSE)
 
-
-# dclust cluster to general maps with a tmap object
-tmap_dclust = function(basemap, dclust, threshold = 2, upto_n = NULL, alpha = 0.5) {
-    library(tmap)
-    dclust_f = dclust %>%
-        arrange(-risk) %>%
-        dplyr::filter(size >= threshold) %>%
-        group_by(size, statistic) %>%
-        dplyr::filter(!duplicated(risk)) %>%
-        ungroup %>%
-        as.data.frame
-    basemap_df = basemap %>%
-        bind_cols(as.data.frame(st_coordinates(st_centroid(.)))) %>%
-        st_drop_geometry %>%
-        rename(x = X, y = Y)
-    bdclust = get.knclusters(basemap_df, dclust_f)
-    basemap$cluster = NA
-    
-    if (is.null(upto_n)) {
-        # p-value extraction
-        bdclust_n = bdclust %>%
-            unlist %>%
-            table %>%
-            as.data.frame
-        colnames(bdclust_n) = c('id', 'freq')
-        basemap$cluster[bdclust_n$id] = bdclust_n$freq
-        # tmap
-        tm_cluster = tm_shape(basemap) +
-            tm_fill('cluster', pal = 'viridis', style = 'cont', colorNA = 'transparent', showNA = FALSE, alpha = alpha) +
-            tm_borders(col = 'dark grey', lwd = 0.3)
-    }
-    
-    if (!is.null(upto_n)) {
-        bdclust_n = bdclust[seq_len(upto_n)]
-        # loop through
-        for (i in seq_len(upto_n)) {
-            cl_ilocs = bdclust_n[[i]]
-            basemap$cluster[cl_ilocs] = i
-        }
-        basemap$cluster = as.factor(basemap$cluster)
-            # tmap
-        tm_cluster = tm_shape(basemap) +
-            tm_fill('cluster', pal = 'Set3', colorNA = 'transparent', showNA = FALSE, alpha = 0.3) +
-            tm_borders(col = 'dark grey', lwd = 0.3)
-
-    }
-    return(tm_cluster)
-}
 
 tmap_arrange(
     tmap_dclust(covar_origin_10_fc, dclust_lung_3it, upto_n = NULL, alpha = 0.7),

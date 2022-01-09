@@ -1,5 +1,5 @@
 ### Covariate processing (generalized)
-### 01/05/2022
+### 01/09/2022
 
 if (!require(pacman)) { install.packages('pacman') } 
 options(repos = 'https://cran.seoul.go.kr')
@@ -11,20 +11,8 @@ geopath <- str_c(basedir, "OneDrive/Data/Korea/")
 
 dbdir = here::here()
 
-
-
-unify_sgg = function() {
-
-}
-
-
-get_unifiedsums = function() {
-
-}
-
-
-
-clear_covar = function(db_dir = dbdir,
+# Clean covariates
+clean_covar = function(db_dir = dbdir,
                        geo_path = geopath,
                        target_year = 2010,
                        gp_base_dir = rdatafiles
@@ -242,16 +230,11 @@ clear_covar = function(db_dir = dbdir,
 
 
 
-#cleaned_10 = clear_covar(target_year = 2010)
-
-
-
-## 
+## To aggregate by 5-year periods
 get_basecovar = function(db_dir = dbdir,
                        geo_path = geopath,
                        target_year = 2010,
                        gp_base_dir = rdatafiles
-
                         ) {
 
     load(gp_base_dir[grep(target_year, gp_base_dir)])
@@ -458,6 +441,7 @@ get_basecovar = function(db_dir = dbdir,
     }
 
 
+# to make unified district data
 clean_consolidated = function(geo_path = geopath, cleaned_df) {
 
     # Conversion
@@ -514,42 +498,31 @@ clean_consolidated = function(geo_path = geopath, cleaned_df) {
 #covar_origin_10_consol = clean_consolidated(cleaned_df = covar_origin_10)
 
 
-
-
-run_smerc_cancertype = function(data = sgg2015, yvar = "Lung_total", sex_b = 'total', ncores = 8) {
-  library(parallel)
-  cns = colnames(data)[grep(str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|'), colnames(data))]
-  print(cns)
-  form_pois = as.formula(str_c(yvar, '~', str_c(cns, collapse = '+')))
-  reg_pois = glm(formula = form_pois, data= data, family = poisson(link = 'log'))
-  cls = parallel::makeCluster(spec = ncores, type = 'PSOCK')
-  data_df = st_drop_geometry(data)
-  return(reg_pois$fitted.values)
-  eltest = smerc::elliptic.test(st_coordinates(st_centroid(data)), 
+# Run smerc elliptic.test
+run_smerc_cancertype = function(data = sgg2015, population = 'n_pop_total', yvar = "Lung_total", sex_b = 'total', control_covars = FALSE, ncores = 8) {
+    library(parallel)
+    data_df = st_drop_geometry(data)
+ 
+    if (control_covars) {
+        cns = colnames(data_df)[grep(str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|'), colnames(data_df))]
+        print(cns)
+        form_pois = as.formula(str_c(yvar, '~', str_c(cns, collapse = '+')))
+        reg_pois = glm(formula = form_pois, data= data_df, family = poisson(link = 'log'))
+        pop_in = reg_pois$fitted.values
+    } 
+    if (!control_covars) {
+        pop_in = unlist(data_df[, population])       
+    }
+    cls = parallel::makeCluster(spec = ncores, type = 'PSOCK')
+    eltest = smerc::elliptic.test(st_coordinates(st_centroid(data)), 
             cases = unlist(data_df[, yvar]), 
             pop = reg_pois$fitted.values,
             shape = c(1, 1.5, 2, 2.5, 3, 4, 5, 6),
             nangle = c(1, 4, 6, 12, 12, 12, 15, 18),
             cl = cls)
-  parallel::stopCluster(cls)
-  return(eltest)
+    parallel::stopCluster(cls)
+    return(eltest)
 }
-
-run_smerc_cancertype_pl = function(data = sgg2015, population = 'n_pop_total', yvar = "Lung_total", sex_b = 'total', ncores = 8) {
-  library(parallel)
-  #cns = colnames(data)[grep(str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|'), colnames(data))]
-  data_df = st_drop_geometry(data)
-  cls = parallel::makeCluster(spec = ncores, type = 'PSOCK')
-  eltest = smerc::elliptic.test(st_coordinates(st_centroid(data)), 
-            cases = unlist(data_df[, yvar]), 
-            pop = unlist(data_df[, population]),
-            shape = c(1, 1.5, 2, 2.5, 3, 4, 5, 6),
-            nangle = c(1, 4, 6, 12, 12, 12, 15, 18),
-            cl = cls)
-  parallel::stopCluster(cls)
-  return(eltest)
-}
-doParallel::stopImplicitCluster()
 
 
 # smerc cluster to general maps with a tmap object
@@ -600,12 +573,9 @@ tmap_smerc = function(basemap, smc, threshold = 2, alpha = 0.3, return_ellipses 
                 return(ell)})
         smc_shps = do.call(rbind, smc_shps) %>%
             mutate(cluster = seq_len(length(smc_pval_addr)))
-        # original: 5179 or 5174?
         st_crs(smc_shps) = st_crs(basemap)
         #smc_shps = st_transform(smc_shps, st_crs(basemap))
-        ##
         tm_cluster = tm_shape(basemap) +
-            #tm_fill('cluster', pal = 'Set3', colorNA = 'transparent', showNA = FALSE, alpha = alpha) +
             tm_borders(col = 'dark grey', lwd = 0.8) +
             tm_shape(smc_shps) +
             tm_polygons('red', colorNA = 'transparent', border.col = 'red', lwd = 1.5, showNA = FALSE, alpha = alpha)
@@ -616,7 +586,7 @@ tmap_smerc = function(basemap, smc, threshold = 2, alpha = 0.3, return_ellipses 
     return(tm_cluster)
 }
 
-
+# Run dclustm analysis
 run_dclust_cancertype = function(
         data, 
         population = 'n_p_total_3', 
@@ -653,6 +623,7 @@ run_dclust_cancertype = function(
 
 
 # dclust cluster to general maps with a tmap object
+# Plot dclustm results with a basemap
 tmap_dclust = function(basemap, dclust, threshold = 2, upto_n = NULL, alpha = 0.5) {
     library(tmap)
     dclust_f = dclust %>%

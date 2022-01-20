@@ -331,107 +331,113 @@ get_basecovar = function(db_dir = dbdir,
         mutate(SGIS = str_sub(SGIS, 1, 5)) %>%
         filter(!is.na(SGIS))
 
-    ## Main
-    kcdc_csvs = 
-    list.files(pattern = '시군구별_*.*.csv$', 
-            path = str_c(db_dir, "/Covariates/"),
-            full.names = TRUE)
-    kcdc_list = lapply(kcdc_csvs, 
-        function(x) read_csv(x, skip = 1, locale = locale(encoding = 'CP949')) %>%
-            mutate_at(.vars = vars(-1:-3), .funs = list(~as.numeric(.))))
-
-    kcdc_cns = 
-        c('sido', 'sigungu', 'sub_sigungu',
-                str_c(rep(c('N_', 'CR_', 'CR_SE_', 'SR_', 'SR_SE_'), 13), rep(2008:2020, each = 5)))
-    kcdc_cn4 = c('sido', 'sigungu', 'sub_sigungu',
-                str_c(rep(c('N_', 'CR_', 'CR_SE_', 'SR_', 'SR_SE_'), 12), rep(2009:2020, each = 5)))
-    colnames(kcdc_list[[1]]) = kcdc_cns
-    colnames(kcdc_list[[2]]) = kcdc_cns[-59:-63]
-    colnames(kcdc_list[[3]]) = kcdc_cns
-    colnames(kcdc_list[[4]]) = kcdc_cn4[-grep('2018$', kcdc_cn4)]
-    colnames(kcdc_list[[5]]) = kcdc_cns
-
-
-    kcdc_covars = kcdc_list %>%
-        lapply(function(x) x %>% 
-            mutate_at(.vars = vars(1:3), .funs = list(~gsub('[[:blank:]]|[가-힣]', '', .))) %>%
-            transmute(SIGUNGU_KCDC = ifelse(sub_sigungu == '', sigungu, sub_sigungu),
-                        SR = !!sym(str_c('SR_', target_year)))) %>%
-        mapply(function(x, y) {colnames(x)[2] = y; return(x)},
-                ., c('r_walking', 'r_obesity', 'r_alcoholmonth', 'r_physmid', 'r_smoking') %>% split(., 1:5), SIMPLIFY = FALSE) %>%
-        plyr::join_all(.)
-    kcdc_covars = kcdc_covars %>%
-        left_join(code_conv, .) %>%
-        mutate(SGIS = as.integer(SGIS))
-
-
-    # KCDC Community Health Data
-    kcdc = readxl::read_xlsx(str_c(db_dir, '/Covariates/CommunityHealth_Covariates_KCDC.xlsx'), 
-                            sheet = str_c('Data_', target_year))
-    kcdc_sub = kcdc %>% 
-        dplyr::select(2:5, #contains('비만율'), contains('음주율'), contains('신체활동'), contains(' 흡연율'), contains('현재흡연율'), 
-        contains('암검진'), #contains('걷기'),
-        contains('건강검진수검율'), contains('암검진율'), contains('실업률'), contains('지가변동률'), contains('산림면적비율'),
-        contains('암검진_대상인원'), contains('암검진_수검인원')) %>%
-        transmute(sggcd = 코드,
-            sido = 시도,
-            sigungu = 시군구,
-            sdsgg = 지역,
-            n_candiag_std = 암검진율_표준화율,
-            n_candiag_cru = 암검진율_조율,
-            n_candiag_sto_denom = 위암검진_수검인원,
-            n_candiag_sto_nom = 위암검진_대상인원,
-            n_candiag_col_denom = 대장암검진_수검인원,
-            n_candiag_col_nom = 대장암검진_대상인원,
-            n_candiag_liv_denom = 간암검진_수검인원,
-            n_candiag_liv_nom = 간암검진_대상인원,
-            n_candiag_bre_denom = 유방암검진_수검인원,
-            n_candiag_bre_nom = 유방암검진_대상인원,
-            n_candiag_cer_denom = 자궁경부암검진_수검인원,
-            n_candiag_cer_nom = 자궁경부암검진_대상인원,
-            r_unemp = 실업률,
-            r_landprice = 지가변동률) %>% # 산림면적비율 = 산림면적/도시면적 * 100 (may exceed 100)
-        # for data-specific problem: different data granularity of availability
-        mutate(sggcd_pseudo = ifelse(grepl('^29$', sggcd), 29010, ifelse(nchar(sggcd) == 5, str_sub(sggcd, 1, 4), sggcd)),
-            sggcd_unemp = ifelse(grepl('^[1-2][0-9]|^39', sggcd), str_sub(sggcd, 1, 2), ifelse(grepl('[3][0-8]..[0-9]', sggcd), str_sub(sggcd, 1, 4), sggcd))) %>%
-        mutate(sigungu_b = if_else(grepl('[[:blank:]]', sigungu), 
-                                str_split(sigungu, ' ', simplify = TRUE)[,1], 
-                                str_c(sido, sigungu))
-            )
-    kcdc_sub_fctrs = sapply(kcdc_sub, function(x) !is.character(x) & !is.factor(x)) %>%
-                    as.logical %>%
-                    which %>%
-                    .[-1]
-    kcdc_sub = kcdc_sub %>%
-        group_by(sggcd_pseudo) %>%
-        mutate_at(vars(-group_cols(), -sggcd, c(kcdc_sub_fctrs), -r_unemp), list(~ifelse(any(!is.na(.)), .[which(!is.na(.))], .))) %>%
-        ungroup %>%
-        group_by(sggcd_unemp) %>%
-        mutate_at(vars(-group_cols(), -sggcd, c(kcdc_sub_fctrs)), list(~ifelse(any(!is.na(.)), .[which(!is.na(.))], .))) %>%
-        #ungroup %>%
-        #group_by(sggcd) %>%
-        # take the first row (sigungu-representative) from each sigungu code
-        #summarize_at(vars(-group_cols()), list(~.[which(!is.na(.))])) %>%
-        ungroup %>%
-        mutate(sggcd = ifelse(sggcd == 29, 29010, sggcd))
-
     sgg_covars_cleaned = sgg %>%
         mutate(SGGCD = as.integer(as.character(SGGCD))) %>%
         mutate(NDVI_mean = sgg_ndvi) %>%
         bind_cols(sgg_emission) %>%
         left_join(cmorts_df, by = c('SGGCD' = 'sgg_cd')) %>%
         left_join(midpop, by = c('SGGCD' = 'sggcd')) %>%
-        left_join(kcdc_sub %>% filter(!duplicated(sggcd)), by = c('SGGCD' = 'sggcd')) %>%
-        left_join(kcdc_covars, by = c('SGGCD' = 'SGIS')) %>%
         left_join(airpol, by = c('SGGCD' = 'sggcd')) %>%
-        left_join(educ, by = c('SGGCD' = 'sggcd')) 
+        left_join(educ, by = c('SGGCD' = 'sggcd'))
+
+
+    if (target_year >= 2008) {
+        ## Main
+        kcdc_csvs = 
+        list.files(pattern = '시군구별_*.*.csv$', 
+                path = str_c(db_dir, "/Covariates/"),
+                full.names = TRUE)
+        kcdc_list = lapply(kcdc_csvs, 
+            function(x) read_csv(x, skip = 1, locale = locale(encoding = 'CP949')) %>%
+                mutate_at(.vars = vars(-1:-3), .funs = list(~as.numeric(.))))
+
+        kcdc_cns = 
+            c('sido', 'sigungu', 'sub_sigungu',
+                    str_c(rep(c('N_', 'CR_', 'CR_SE_', 'SR_', 'SR_SE_'), 13), rep(2008:2020, each = 5)))
+        kcdc_cn4 = c('sido', 'sigungu', 'sub_sigungu',
+                    str_c(rep(c('N_', 'CR_', 'CR_SE_', 'SR_', 'SR_SE_'), 12), rep(2009:2020, each = 5)))
+        colnames(kcdc_list[[1]]) = kcdc_cns
+        colnames(kcdc_list[[2]]) = kcdc_cns[-59:-63]
+        colnames(kcdc_list[[3]]) = kcdc_cns
+        colnames(kcdc_list[[4]]) = kcdc_cn4[-grep('2018$', kcdc_cn4)]
+        colnames(kcdc_list[[5]]) = kcdc_cns
+
+
+        kcdc_covars = kcdc_list %>%
+            lapply(function(x) x %>% 
+                mutate_at(.vars = vars(1:3), .funs = list(~gsub('[[:blank:]]|[가-힣]', '', .))) %>%
+                transmute(SIGUNGU_KCDC = ifelse(sub_sigungu == '', sigungu, sub_sigungu),
+                            SR = !!sym(str_c('SR_', target_year)))) %>%
+            mapply(function(x, y) {colnames(x)[2] = y; return(x)},
+                    ., c('r_walking', 'r_obesity', 'r_alcoholmonth', 'r_physmid', 'r_smoking') %>% split(., 1:5), SIMPLIFY = FALSE) %>%
+            plyr::join_all(.)
+        kcdc_covars = kcdc_covars %>%
+            left_join(code_conv, .) %>%
+            mutate(SGIS = as.integer(SGIS))
+
+
+        # KCDC Community Health Data
+        kcdc = readxl::read_xlsx(str_c(db_dir, '/Covariates/CommunityHealth_Covariates_KCDC.xlsx'), 
+                                sheet = str_c('Data_', target_year))
+        kcdc_sub = kcdc %>% 
+            dplyr::select(2:5, #contains('비만율'), contains('음주율'), contains('신체활동'), contains(' 흡연율'), contains('현재흡연율'), 
+            contains('암검진'), #contains('걷기'),
+            contains('건강검진수검율'), contains('암검진율'), contains('실업률'), contains('지가변동률'), contains('산림면적비율'),
+            contains('암검진_대상인원'), contains('암검진_수검인원')) %>%
+            transmute(sggcd = 코드,
+                sido = 시도,
+                sigungu = 시군구,
+                sdsgg = 지역,
+                n_candiag_std = 암검진율_표준화율,
+                n_candiag_cru = 암검진율_조율,
+                n_candiag_sto_denom = 위암검진_수검인원,
+                n_candiag_sto_nom = 위암검진_대상인원,
+                n_candiag_col_denom = 대장암검진_수검인원,
+                n_candiag_col_nom = 대장암검진_대상인원,
+                n_candiag_liv_denom = 간암검진_수검인원,
+                n_candiag_liv_nom = 간암검진_대상인원,
+                n_candiag_bre_denom = 유방암검진_수검인원,
+                n_candiag_bre_nom = 유방암검진_대상인원,
+                n_candiag_cer_denom = 자궁경부암검진_수검인원,
+                n_candiag_cer_nom = 자궁경부암검진_대상인원,
+                r_unemp = 실업률,
+                r_landprice = 지가변동률) %>% # 산림면적비율 = 산림면적/도시면적 * 100 (may exceed 100)
+            # for data-specific problem: different data granularity of availability
+            mutate(sggcd_pseudo = ifelse(grepl('^29$', sggcd), 29010, ifelse(nchar(sggcd) == 5, str_sub(sggcd, 1, 4), sggcd)),
+                sggcd_unemp = ifelse(grepl('^[1-2][0-9]|^39', sggcd), str_sub(sggcd, 1, 2), ifelse(grepl('[3][0-8]..[0-9]', sggcd), str_sub(sggcd, 1, 4), sggcd))) %>%
+            mutate(sigungu_b = if_else(grepl('[[:blank:]]', sigungu), 
+                                    str_split(sigungu, ' ', simplify = TRUE)[,1], 
+                                    str_c(sido, sigungu))
+                )
+        kcdc_sub_fctrs = sapply(kcdc_sub, function(x) !is.character(x) & !is.factor(x)) %>%
+                        as.logical %>%
+                        which %>%
+                        .[-1]
+        kcdc_sub = kcdc_sub %>%
+            group_by(sggcd_pseudo) %>%
+            mutate_at(vars(-group_cols(), -sggcd, all_of(kcdc_sub_fctrs), -r_unemp), list(~ifelse(any(!is.na(.)), .[which(!is.na(.))], .))) %>%
+            ungroup %>%
+            group_by(sggcd_unemp) %>%
+            mutate_at(vars(-group_cols(), -sggcd, all_of(kcdc_sub_fctrs)), list(~ifelse(any(!is.na(.)), .[which(!is.na(.))], .))) %>%
+            #ungroup %>%
+            #group_by(sggcd) %>%
+            # take the first row (sigungu-representative) from each sigungu code
+            #summarize_at(vars(-group_cols()), list(~.[which(!is.na(.))])) %>%
+            ungroup %>%
+            mutate(sggcd = ifelse(sggcd == 29, 29010, sggcd))
+
+    sgg_covars_cleaned = sgg_covars_cleaned %>%
+        left_join(kcdc_sub %>% filter(!duplicated(sggcd)), by = c('SGGCD' = 'sggcd')) %>%
+        left_join(kcdc_covars, by = c('SGGCD' = 'SGIS'))
+
+    }
    
     return(sgg_covars_cleaned)
     }
 
 
 # to make unified district data
-clean_consolidated = function(geo_path = geopath, cleaned_df) {
+clean_consolidated = function(geo_path = geopath, cleaned_df, target_year = 2010) {
 
     # Conversion
     conv_table = read.csv(paste(geo_path, 'SGG_1995_2018_Conversion_Table_201108.csv', sep = ''), fileEncoding = 'EUC-KR')
@@ -456,7 +462,7 @@ clean_consolidated = function(geo_path = geopath, cleaned_df) {
         summarize_at(.vars = vars(starts_with('n_')),
                      .funs = list(~sum(., na.rm = TRUE))) %>%
         ungroup %>%
-        mutate(p_candiag_sto = 100 * n_candiag_sto_denom / n_candiag_sto_nom,
+        mutate(p_candiag_sto = ifelse(target_year >= 2008, 100 * n_candiag_sto_denom / n_candiag_sto_nom, NA),
                p_hbac_total = 100 * (n_bachelor_total + n_masters_total + n_doctorate_total) / n_total_6yo_total,
                p_hbac_male = 100 * (n_bachelor_male + n_masters_male + n_doctorate_male) / n_total_6yo_male,
                p_hbac_female = 100 * (n_bachelor_female + n_masters_female + n_doctorate_female) / n_total_6yo_female) %>%

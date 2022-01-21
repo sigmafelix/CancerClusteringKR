@@ -59,6 +59,9 @@ clean_covar = function(db_dir = dbdir,
                              .funs = list(~unique(.))) %>%
                 ungroup
         }
+        if (sum(grepl('^(sigungu|sgg|SGG)', colnames(carreg))) != 0) {
+            colnames(carreg)[grep('^(sigungu|sgg|SGG)', colnames(carreg))] = 'SGGCD'
+        }
         sgg = st_transform(carreg, 5174)
         st_crs(ndvi_stars) = 5174
     }
@@ -223,10 +226,18 @@ clean_covar = function(db_dir = dbdir,
 get_basecovar = function(db_dir = dbdir,
                        geo_path = geopath,
                        target_year = 2010,
+                       target_year_kcdc = 2010,
                        gp_base_dir = rdatafiles
                         ) {
 
     load(gp_base_dir[grep(target_year, gp_base_dir)])
+
+    ## remove after the GP data fix
+    assign(str_c('em.', target_year),
+            raster::mosaic(get(str_c('seed.raster.a.', target_year)),
+                           get(str_c('seed.raster.l.', target_year)),
+                           get(str_c('seed.raster.p.', target_year)),
+                           fun = sum))
 
     # Cancer mortality (number only)
     cmorts = list.files(pattern = '^cancerMor',
@@ -279,6 +290,9 @@ get_basecovar = function(db_dir = dbdir,
                              .funs = list(~unique(.))) %>%
                 ungroup %>%
                 rename(SGGCD = SIGUNGU_CD)
+        }
+        if (sum(grepl('^(sigungu|sgg|SGG)', colnames(carreg))) != 0) {
+            colnames(carreg)[grep('^(sigungu|sgg|SGG)', colnames(carreg))] = 'SGGCD'
         }
         sgg = st_transform(carreg, 5174)
         st_crs(ndvi_stars) = 5174
@@ -341,7 +355,7 @@ get_basecovar = function(db_dir = dbdir,
         left_join(educ, by = c('SGGCD' = 'sggcd'))
 
 
-    if (target_year >= 2008) {
+    if (target_year_kcdc >= 2008) {
         ## Main
         kcdc_csvs = 
         list.files(pattern = '시군구별_*.*.csv$', 
@@ -367,7 +381,7 @@ get_basecovar = function(db_dir = dbdir,
             lapply(function(x) x %>% 
                 mutate_at(.vars = vars(1:3), .funs = list(~gsub('[[:blank:]]|[가-힣]', '', .))) %>%
                 transmute(SIGUNGU_KCDC = ifelse(sub_sigungu == '', sigungu, sub_sigungu),
-                            SR = !!sym(str_c('SR_', target_year)))) %>%
+                            SR = !!sym(str_c('SR_', target_year_kcdc)))) %>%
             mapply(function(x, y) {colnames(x)[2] = y; return(x)},
                     ., c('r_walking', 'r_obesity', 'r_alcoholmonth', 'r_physmid', 'r_smoking') %>% split(., 1:5), SIMPLIFY = FALSE) %>%
             plyr::join_all(.)
@@ -462,11 +476,14 @@ clean_consolidated = function(geo_path = geopath, cleaned_df, target_year = 2010
         summarize_at(.vars = vars(starts_with('n_')),
                      .funs = list(~sum(., na.rm = TRUE))) %>%
         ungroup %>%
-        mutate(p_candiag_sto = ifelse(target_year >= 2008, 100 * n_candiag_sto_denom / n_candiag_sto_nom, NA),
+        mutate(p_65p_total = 100 * n_calc_pop_65p_total / n_calc_pop_total,
+               p_65p_male = 100 * n_calc_pop_65p_male / n_calc_pop_male,
+               p_65p_female = 100 * n_calc_pop_65p_female / n_calc_pop_female,
                p_hbac_total = 100 * (n_bachelor_total + n_masters_total + n_doctorate_total) / n_total_6yo_total,
                p_hbac_male = 100 * (n_bachelor_male + n_masters_male + n_doctorate_male) / n_total_6yo_male,
-               p_hbac_female = 100 * (n_bachelor_female + n_masters_female + n_doctorate_female) / n_total_6yo_female) %>%
-        dplyr::select(sgg_cd_c, starts_with('n_Stomach'), starts_with('n_Lung'), starts_with('p_hbac'), p_candiag_sto, starts_with('n_pop'))
+               p_hbac_female = 100 * (n_bachelor_female + n_masters_female + n_doctorate_female) / n_total_6yo_female,
+               p_candiag_sto = ifelse(target_year_kcdc >= 2008, 100 * n_candiag_sto_denom / n_candiag_sto_nom, NA)) %>%
+        dplyr::select(sgg_cd_c, starts_with('n_Stomach'), starts_with('n_Lung'), starts_with('p_hbac'), p_candiag_sto, starts_with('n_pop'), starts_with('p_65p'))
     # air pollution
     cleaned_df_apsum = cleaned_df %>%
         st_drop_geometry %>%
@@ -474,6 +491,10 @@ clean_consolidated = function(geo_path = geopath, cleaned_df, target_year = 2010
         summarize_at(.vars = vars(starts_with('ap_sum')),
                      .funs = list(~sum(., na.rm = TRUE))) %>%
         ungroup
+
+    source("Cancer_Data_Clearing_081721.R")
+    pr_csvs_con_prempop = pr_csvs_con_prempop %>%
+        mutate(SGIS = as.integer(SGIS))
     # Consolidation
     cleaned_df_consol =
     cleaned_df %>%
@@ -482,7 +503,8 @@ clean_consolidated = function(geo_path = geopath, cleaned_df, target_year = 2010
         ungroup %>%
         left_join(cleaned_df_counts) %>%
         left_join(cleaned_df_rates) %>%
-        left_join(cleaned_df_apsum)
+        left_join(cleaned_df_apsum) %>%
+        left_join(pr_csvs_con_prempop, by = c('sgg_cd_c' = 'SGIS'))
     return(cleaned_df_consol)
 }
 

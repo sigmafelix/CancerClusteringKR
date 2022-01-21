@@ -3,11 +3,17 @@ options(repos = "https://cran.seoul.go.kr/")
 if (!require(pacman)) {
     install.packages("pacman")
 }
-p_load(tidyverse, sf, spdep, DCluster, tmap, smerc, knitr, readxl, kableExtra, DClusterm, patchwork)
+p_load(tidyverse, sf, DCluster, tmap, smerc, knitr, readxl, kableExtra, DClusterm, patchwork)
+p_load(stars, raster, starsExtra, here, stargazer)
 
+username = 'isong'
+basedir = sprintf('/mnt/c/Users/%s/', username)
+rdatafiles = list.files(path = str_c(basedir, 'Documents/GP/'), pattern = '*.RData', full.names = TRUE)
+geopath = str_c(basedir, "OneDrive/Data/Korea/")
 #homedir <- "/home/felix/"
-drive <- str_c(basedir, "OneDrive/NCC_Project/CancerClustering/")
-geopath <- str_c(basedir, "OneDrive/Data/Korea/")
+drive = str_c(basedir, "OneDrive/NCC_Project/CancerClustering/")
+geopath = str_c(basedir, "OneDrive/Data/Korea/")
+dbdir = drive  # here::here()
 
 # incidence
 inc <- read.csv(paste(drive, "cancerInc_sgg.csv", sep = ""), fileEncoding = "EUC-KR")

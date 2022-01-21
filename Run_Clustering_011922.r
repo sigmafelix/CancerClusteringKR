@@ -1,13 +1,24 @@
 ### Run Clustering Analysis
-### 01/19/22
+### 01/20/22
 
 source('./base_functions.R')
 source('./Cleaning_Population_011922.r')
 
 # knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, error = FALSE, fig.height = 7.5)
 
-covar_origin_10 = get_basecovar(target_year = 2010)
+covar_origin_10 = get_basecovar(target_year = 2010, target_year_kcdc = 2010)
+covar_origin_05 = get_basecovar(target_year = 2005, target_year_kcdc = 2008)
+covar_origin_00 = get_basecovar(target_year = 2000, target_year_kcdc = 2000)
+
 covar_origin_10_fc = clean_consolidated(cleaned_df = covar_origin_10) %>%
+    mutate_at(.vars = vars(-geom),
+              .funs = list(~ifelse(is.na(.), median(., na.rm = TRUE), .))) %>%
+    left_join(morinc_clw, by = c('sgg_cd_c'))
+covar_origin_05_fc = clean_consolidated(cleaned_df = covar_origin_05) %>%
+    mutate_at(.vars = vars(-geom),
+              .funs = list(~ifelse(is.na(.), median(., na.rm = TRUE), .))) %>%
+    left_join(morinc_clw, by = c('sgg_cd_c'))
+covar_origin_00_fc = clean_consolidated(cleaned_df = covar_origin_00) %>%
     mutate_at(.vars = vars(-geom),
               .funs = list(~ifelse(is.na(.), median(., na.rm = TRUE), .))) %>%
     left_join(morinc_clw, by = c('sgg_cd_c'))

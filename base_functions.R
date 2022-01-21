@@ -340,7 +340,7 @@ get_basecovar = function(db_dir = dbdir,
     code_conv = read_xlsx(str_c(db_dir, '/행정자치부_심평원_통계청_코드_연계표_211119.xlsx'), sheet = 4)
     code_conv = code_conv %>% 
         dplyr::select(SIGUNGU_PSEUDO, ends_with(as.character(target_year))) %>%
-        rename(SGIS = sym(str_c('SGIS_', target_year)),
+        rename(SGIS = !!sym(str_c('SGIS_', target_year)),
                 SIGUNGU_KCDC = SIGUNGU_PSEUDO) %>%
         mutate(SGIS = str_sub(SGIS, 1, 5)) %>%
         filter(!is.na(SGIS))
@@ -380,6 +380,7 @@ get_basecovar = function(db_dir = dbdir,
         kcdc_covars = kcdc_list %>%
             lapply(function(x) x %>% 
                 mutate_at(.vars = vars(1:3), .funs = list(~gsub('[[:blank:]]|[가-힣]', '', .))) %>%
+                mutate(SR_2008 = ifelse(sum(grepl('SR_2008', colnames(x))) ==0, NA, SR_2008)) %>%
                 transmute(SIGUNGU_KCDC = ifelse(sub_sigungu == '', sigungu, sub_sigungu),
                             SR = !!sym(str_c('SR_', target_year_kcdc)))) %>%
             mapply(function(x, y) {colnames(x)[2] = y; return(x)},
@@ -392,7 +393,7 @@ get_basecovar = function(db_dir = dbdir,
 
         # KCDC Community Health Data
         kcdc = readxl::read_xlsx(str_c(db_dir, '/Covariates/CommunityHealth_Covariates_KCDC.xlsx'), 
-                                sheet = str_c('Data_', target_year))
+                                sheet = str_c('Data_', target_year_kcdc))
         kcdc_sub = kcdc %>% 
             dplyr::select(2:5, #contains('비만율'), contains('음주율'), contains('신체활동'), contains(' 흡연율'), contains('현재흡연율'), 
             contains('암검진'), #contains('걷기'),
@@ -404,16 +405,16 @@ get_basecovar = function(db_dir = dbdir,
                 sdsgg = 지역,
                 n_candiag_std = 암검진율_표준화율,
                 n_candiag_cru = 암검진율_조율,
-                n_candiag_sto_denom = 위암검진_수검인원,
-                n_candiag_sto_nom = 위암검진_대상인원,
-                n_candiag_col_denom = 대장암검진_수검인원,
-                n_candiag_col_nom = 대장암검진_대상인원,
-                n_candiag_liv_denom = 간암검진_수검인원,
-                n_candiag_liv_nom = 간암검진_대상인원,
-                n_candiag_bre_denom = 유방암검진_수검인원,
-                n_candiag_bre_nom = 유방암검진_대상인원,
-                n_candiag_cer_denom = 자궁경부암검진_수검인원,
-                n_candiag_cer_nom = 자궁경부암검진_대상인원,
+                n_candiag_sto_denom = ifelse(target_year_kcdc >= 2010, 위암검진_수검인원, NA),
+                n_candiag_sto_nom = ifelse(target_year_kcdc >= 2010, 위암검진_대상인원, NA),
+                n_candiag_col_denom = ifelse(target_year_kcdc >= 2010, 대장암검진_수검인원, NA),
+                n_candiag_col_nom = ifelse(target_year_kcdc >= 2010, 대장암검진_대상인원, NA),
+                n_candiag_liv_denom = ifelse(target_year_kcdc >= 2010, 간암검진_수검인원, NA),
+                n_candiag_liv_nom = ifelse(target_year_kcdc >= 2010, 간암검진_대상인원, NA),
+                n_candiag_bre_denom = ifelse(target_year_kcdc >= 2010, 유방암검진_수검인원, NA),
+                n_candiag_bre_nom = ifelse(target_year_kcdc >= 2010, 유방암검진_대상인원, NA),
+                n_candiag_cer_denom = ifelse(target_year_kcdc >= 2010, 자궁경부암검진_수검인원, NA),
+                n_candiag_cer_nom = ifelse(target_year_kcdc >= 2010, 자궁경부암검진_대상인원, NA),
                 r_unemp = 실업률,
                 r_landprice = 지가변동률) %>% # 산림면적비율 = 산림면적/도시면적 * 100 (may exceed 100)
             # for data-specific problem: different data granularity of availability

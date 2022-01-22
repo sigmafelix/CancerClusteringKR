@@ -229,14 +229,21 @@ get_basecovar = function(db_dir = dbdir,
                        target_year_kcdc = 2010,
                        gp_base_dir = rdatafiles
                         ) {
+    ##
+    if (target_year == 2000) {
+        target_year_r = 2001
+    } else {
+        target_year_r = target_year
+    }
 
-    load(gp_base_dir[grep(target_year, gp_base_dir)])
+    load(gp_base_dir[grep(target_year_r, gp_base_dir)])
+
 
     ## remove after the GP data fix
-    assign(str_c('em.', target_year),
-            raster::mosaic(get(str_c('seed.raster.a.', target_year)),
-                           get(str_c('seed.raster.l.', target_year)),
-                           get(str_c('seed.raster.p.', target_year)),
+    assign(str_c('em.', target_year_r),
+            raster::mosaic(get(str_c('seed.raster.a.', target_year_r)),
+                           get(str_c('seed.raster.l.', target_year_r)),
+                           get(str_c('seed.raster.p.', target_year_r)),
                            fun = sum))
 
     # Cancer mortality (number only)
@@ -264,17 +271,26 @@ get_basecovar = function(db_dir = dbdir,
     # Total Population by sex
     midpop = read.csv(str_c(db_dir, '/MidPopulation_2000_2020.csv'), fileEncoding = 'CP949')
     midpop = midpop %>%
-        dplyr::select(1, 3, 6, 10:14)
-    colnames(midpop) = c('sggcd', 'sex0', 'agegroup', 'Y2000', 'Y2005', 'Y2010', 'Y2015', 'Y2020')
-    midpop = midpop %>%
+        dplyr::select(1, 3, 6, 5, 10:14)
+    colnames(midpop) = c('sggcd', 'sex0', 'agegroup', 'agegroup_f', 'Y2000', 'Y2005', 'Y2010', 'Y2015', 'Y2020')
+    midpop_elderly = midpop %>%
+        filter(agegroup_f %in% c(0, 280, 310, 330, 340)) %>%
+        group_by(sggcd, sex0) %>%
+        summarize(n_calc_pop = (!!sym(str_c("Y", target_year)))[1],
+                  n_calc_pop_65p = sum((!!sym(str_c("Y", target_year)))[-1])) %>%
+        ungroup %>%
+        mutate(sex0 = plyr::mapvalues(sex0, 0:2, c('total', 'male', 'female'))) %>%
+        pivot_wider(names_from = sex0,
+                    values_from = c(n_calc_pop, n_calc_pop_65p))
+
+    midpop_sex = midpop %>%
         dplyr::select(1:3, ends_with(as.character(target_year))) %>%
         filter(agegroup == '계') %>%
-        pivot_wider(names_from = sex0, values_from = sym(str_c('Y', target_year))) %>%
+        pivot_wider(names_from = sex0, values_from = !!sym(str_c('Y', target_year))) %>%
         dplyr::select(-2) %>%
         rename(n_pop_total = `0`,
             n_pop_male = `1`,
             n_pop_female = `2`)
-
 
     # NDVI
     st_crs(carreg) = 5179
@@ -300,14 +316,14 @@ get_basecovar = function(db_dir = dbdir,
     sgg_ndvi = starsExtra::extract2(ndvi_stars, sgg, function(x) mean(x, na.rm = T))
 
     # Air pollution exposure
-    airpol = read.csv(str_c(db_dir, '/Covariates/Airpollution/', target_year, '_new.csv'), fileEncoding = 'CP949')
+    airpol = read.csv(str_c(db_dir, '/Covariates/Airpollution/', target_year_r, '_new.csv'), fileEncoding = 'CP949')
     airpol = airpol %>%
         transmute(sggcd = SGG_cd,
                 ap_PM10_pred = PM10_pred,
                 ap_NO2_pred = NO2_pred)
 
     # Emission
-    emission = st_as_stars(get(str_c('em.', target_year)), crs = 5174)
+    emission = st_as_stars(get(str_c('em.', target_year_r)), crs = 5174)
     st_crs(emission) = 5174
     sgg_5174 = st_transform(sgg, 5174)
     sgg_emission = starsExtra::extract2(emission, sgg_5174, function(x) sum(x, na.rm = T))
@@ -335,27 +351,28 @@ get_basecovar = function(db_dir = dbdir,
         pivot_wider(names_from = c(name, sex_cd), names_prefix = 'n_', names_sep = '_')
 
 
-    # KCDC Community Health Data: separate tables: 2010, 2015
-    ## KCDC code to others
-    code_conv = read_xlsx(str_c(db_dir, '/행정자치부_심평원_통계청_코드_연계표_211119.xlsx'), sheet = 4)
-    code_conv = code_conv %>% 
-        dplyr::select(SIGUNGU_PSEUDO, ends_with(as.character(target_year))) %>%
-        rename(SGIS = !!sym(str_c('SGIS_', target_year)),
-                SIGUNGU_KCDC = SIGUNGU_PSEUDO) %>%
-        mutate(SGIS = str_sub(SGIS, 1, 5)) %>%
-        filter(!is.na(SGIS))
-
     sgg_covars_cleaned = sgg %>%
         mutate(SGGCD = as.integer(as.character(SGGCD))) %>%
         mutate(NDVI_mean = sgg_ndvi) %>%
         bind_cols(sgg_emission) %>%
         left_join(cmorts_df, by = c('SGGCD' = 'sgg_cd')) %>%
-        left_join(midpop, by = c('SGGCD' = 'sggcd')) %>%
         left_join(airpol, by = c('SGGCD' = 'sggcd')) %>%
-        left_join(educ, by = c('SGGCD' = 'sggcd'))
+        left_join(educ, by = c('SGGCD' = 'sggcd')) %>%
+        left_join(midpop_sex, by = c('SGGCD' = 'sggcd')) %>%
+        left_join(midpop_elderly, by = c('SGGCD' = 'sggcd'))
+
 
 
     if (target_year_kcdc >= 2008) {
+        # KCDC Community Health Data: separate tables: 2010, 2015
+        ## KCDC code to others
+        code_conv = read_xlsx(str_c(db_dir, '/행정자치부_심평원_통계청_코드_연계표_211119.xlsx'), sheet = 4)
+        code_conv = code_conv %>% 
+            dplyr::select(SIGUNGU_PSEUDO, ends_with(as.character(target_year_kcdc))) %>%
+            rename(SGIS = !!sym(str_c('SGIS_', target_year_kcdc)),
+                    SIGUNGU_KCDC = SIGUNGU_PSEUDO) %>%
+            mutate(SGIS = str_sub(SGIS, 1, 5)) %>%
+            filter(!is.na(SGIS))
         ## Main
         kcdc_csvs = 
         list.files(pattern = '시군구별_*.*.csv$', 
@@ -483,7 +500,7 @@ clean_consolidated = function(geo_path = geopath, cleaned_df, target_year = 2010
                p_hbac_total = 100 * (n_bachelor_total + n_masters_total + n_doctorate_total) / n_total_6yo_total,
                p_hbac_male = 100 * (n_bachelor_male + n_masters_male + n_doctorate_male) / n_total_6yo_male,
                p_hbac_female = 100 * (n_bachelor_female + n_masters_female + n_doctorate_female) / n_total_6yo_female,
-               p_candiag_sto = ifelse(target_year_kcdc >= 2008, 100 * n_candiag_sto_denom / n_candiag_sto_nom, NA)) %>%
+               p_candiag_sto = ifelse(target_year >= 2008, 100 * n_candiag_sto_denom / n_candiag_sto_nom, NA)) %>%
         dplyr::select(sgg_cd_c, starts_with('n_Stomach'), starts_with('n_Lung'), starts_with('p_hbac'), p_candiag_sto, starts_with('n_pop'), starts_with('p_65p'))
     # air pollution
     cleaned_df_apsum = cleaned_df %>%
@@ -493,9 +510,6 @@ clean_consolidated = function(geo_path = geopath, cleaned_df, target_year = 2010
                      .funs = list(~sum(., na.rm = TRUE))) %>%
         ungroup
 
-    source("Cancer_Data_Clearing_081721.R")
-    pr_csvs_con_prempop = pr_csvs_con_prempop %>%
-        mutate(SGIS = as.integer(SGIS))
     # Consolidation
     cleaned_df_consol =
     cleaned_df %>%
@@ -504,8 +518,16 @@ clean_consolidated = function(geo_path = geopath, cleaned_df, target_year = 2010
         ungroup %>%
         left_join(cleaned_df_counts) %>%
         left_join(cleaned_df_rates) %>%
-        left_join(cleaned_df_apsum) %>%
-        left_join(pr_csvs_con_prempop, by = c('sgg_cd_c' = 'SGIS'))
+        left_join(cleaned_df_apsum)
+
+    if (target_year == 2010) {   
+        source("Cancer_Data_Clearing_081721.R")
+        pr_csvs_con_prempop = pr_csvs_con_prempop %>%
+            mutate(SGIS = as.integer(SGIS))
+
+        cleaned_df_consol = cleaned_df_consol %>%
+            left_join(pr_csvs_con_prempop, by = c('sgg_cd_c' = 'SGIS'))
+    }
     return(cleaned_df_consol)
 }
 
@@ -520,8 +542,8 @@ regress_counts = function(data,
                           population,
                           yvar,
                           sex_b,
+                          string_search = str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|'),
                           add_var = NULL) {
-    string_search = str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|')
     if (!is.null(add_var)) {
         string_search = str_replace(string_search, '\\^NDVI_\\)', str_c('^NDVI_|', add_var, ')'))
     }
@@ -537,7 +559,8 @@ regress_counts = function(data,
 run_smerc_cancertype = function(data = sgg2015, 
                                 population = 'n_pop_total', 
                                 yvar = "Lung_total", 
-                                sex_b = 'total', 
+                                sex_b = 'total',
+                                string_search = str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|'),
                                 add_var = NULL,
                                 adjust = FALSE, 
                                 ncores = 8) {
@@ -545,7 +568,8 @@ run_smerc_cancertype = function(data = sgg2015,
     data_df = st_drop_geometry(data)
  
     if (adjust) {
-        reg_pois = regress_counts(data_df, population = population, yvar = yvar, sex_b = sex_b, add_var = add_var)
+        reg_pois = regress_counts(data_df, population = population, yvar = yvar, 
+                                    sex_b = sex_b, add_var = add_var, string_search = string_search)
         pop_in = reg_pois$fitted.values
     } 
     if (!adjust) {

@@ -14,11 +14,11 @@ covar_origin_10_fc = clean_consolidated(cleaned_df = covar_origin_10) %>%
     mutate_at(.vars = vars(-geom),
               .funs = list(~ifelse(is.na(.), median(., na.rm = TRUE), .))) %>%
     left_join(morinc_clw, by = c('sgg_cd_c'))
-covar_origin_05_fc = clean_consolidated(cleaned_df = covar_origin_05) %>%
+covar_origin_05_fc = clean_consolidated(cleaned_df = covar_origin_05, target_year = 2005) %>%
     mutate_at(.vars = vars(-geom),
               .funs = list(~ifelse(is.na(.), median(., na.rm = TRUE), .))) %>%
     left_join(morinc_clw, by = c('sgg_cd_c'))
-covar_origin_00_fc = clean_consolidated(cleaned_df = covar_origin_00) %>%
+covar_origin_00_fc = clean_consolidated(cleaned_df = covar_origin_00, target_year = 2000) %>%
     mutate_at(.vars = vars(-geom),
               .funs = list(~ifelse(is.na(.), median(., na.rm = TRUE), .))) %>%
     left_join(morinc_clw, by = c('sgg_cd_c'))

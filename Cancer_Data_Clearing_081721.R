@@ -164,7 +164,7 @@ geopath = sprintf('/mnt/c/Users/%s/OneDrive/Data/Korea/', userid)
 
 
 # Insurance Premium ####
-dbdir = here::here()
+dbdir = drive
 ## KCDC code to others
 code_conv = read_xlsx(str_c(dbdir, '/행정자치부_심평원_통계청_코드_연계표_211119.xlsx'), sheet = 5)
 code_conv_d = code_conv %>% 

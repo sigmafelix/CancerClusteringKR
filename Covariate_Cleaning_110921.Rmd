@@ -120,13 +120,18 @@ sgg_emission = sgg_emission %>%
 colnames(sgg_emission) = str_c('sum_', attr(emission, 'dimensions')$band$values)
 
 # Education attainment
-educ = read.csv(str_c(dbdir, '/Covariates/Education_2015.csv'), fileEncoding = 'CP949') %>%
-    .[,c(1, 4:7)]
-colnames(educ) = c('sggcd', 'total_6yo', 'bachelor', 'masters', 'doctorate')
+educ = read.csv(str_c(dbdir, '/Covariates/Education_2000.csv'), fileEncoding = 'CP949') %>%
+    .[,c(1:2, 4:7)]
+colnames(educ) = c('sggcd', 'sex_cd', 'total_6yo', 'bachelor', 'masters', 'doctorate')
 educ = educ %>%
-    transmute(sggcd = as.integer(str_split(sggcd, ' ', simplify = TRUE)[,1]),
-              p_eduhigh = 100 * (bachelor + masters + doctorate) / total_6yo)
-
+        transmute(sggcd = as.integer(str_split(sggcd, ' ', simplify = TRUE)[,1]),
+                sex_cd = plyr::mapvalues(sex_cd, unique(sex_cd), c('total', 'male', 'female')),
+                bachelor = bachelor,
+                masters = masters, 
+                doctorate = doctorate,
+                total_6yo = total_6yo) %>%
+        pivot_longer(cols = 3:6) %>%
+        pivot_wider(names_from = c(name, sex_cd), names_prefix = 'n_', names_sep = '_')
 
 # KCDC Community Health Data: separate tables: 2010, 2015
 ## KCDC code to others

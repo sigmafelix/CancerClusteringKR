@@ -1,7 +1,7 @@
 ### Covariate processing (generalized)
-### 01/09/2022
+### 01/22/2022
 
-# Clean covariates
+# Clean covariates: soon to be obsolete
 clean_covar = function(db_dir = dbdir,
                        geo_path = geopath,
                        target_year = 2010,
@@ -206,10 +206,10 @@ clean_covar = function(db_dir = dbdir,
    
 
     # Conversion
-    conv_table = read.csv(paste(geo_path, 'SGG_1995_2018_Conversion_Table_201108.csv', sep = ''), fileEncoding = 'EUC-KR')
+    conv_table = read.csv(paste(db_dir, 'SGG_before_2022_Conversion_Table_220122_CConly.csv', sep = ''), fileEncoding = 'EUC-KR')
 
     conv_table_e = conv_table %>%
-        filter(from_year >= 1999 & from_year <= 2013) %>%
+        filter(to_year >= 1999 & from_year <= 2013) %>%
         dplyr::select(fromcode, tocode)
 
     sgg_covars_cleaned = sgg_covars_cleaned %>%
@@ -355,7 +355,7 @@ get_basecovar = function(db_dir = dbdir,
         mutate(SGGCD = as.integer(as.character(SGGCD))) %>%
         mutate(NDVI_mean = sgg_ndvi) %>%
         bind_cols(sgg_emission) %>%
-        left_join(cmorts_df, by = c('SGGCD' = 'sgg_cd')) %>%
+        #left_join(cmorts_df, by = c('SGGCD' = 'sgg_cd')) %>%
         left_join(airpol, by = c('SGGCD' = 'sggcd')) %>%
         left_join(educ, by = c('SGGCD' = 'sggcd')) %>%
         left_join(midpop_sex, by = c('SGGCD' = 'sggcd')) %>%
@@ -469,13 +469,13 @@ get_basecovar = function(db_dir = dbdir,
 
 
 # to make unified district data
-clean_consolidated = function(geo_path = geopath, cleaned_df, target_year = 2010) {
+clean_consolidated = function(db_dir = dbdir, cleaned_df, target_year = 2010) {
 
     # Conversion
-    conv_table = read.csv(paste(geo_path, 'SGG_1995_2018_Conversion_Table_201108.csv', sep = ''), fileEncoding = 'EUC-KR')
+    conv_table = read.csv(paste(db_dir, 'SGG_before_2022_Conversion_Table_220122_CConly.csv', sep = ''), fileEncoding = 'EUC-KR')
 
     conv_table_e = conv_table %>%
-        filter(from_year >= 1999 & from_year <= 2013) %>%
+        filter(to_year >= 1999 & from_year <= 2013) %>%
         dplyr::select(fromcode, tocode)
 
     cleaned_df = cleaned_df %>%
@@ -579,8 +579,8 @@ run_smerc_cancertype = function(data = sgg2015,
     eltest = smerc::elliptic.test(st_coordinates(st_centroid(data)), 
             cases = unlist(data_df[, yvar]), 
             pop = pop_in,
-            shape = c(1, 1.5, 2, 2.5, 3, 4, 5, 6),
-            nangle = c(1, 4, 6, 12, 12, 12, 15, 18),
+            shape = c(1, 1.5, 2, 2.5, 3, 4),
+            nangle = c(1, 4, 6, 10, 12, 12),
             cl = cls)
     parallel::stopCluster(cls)
     return(eltest)

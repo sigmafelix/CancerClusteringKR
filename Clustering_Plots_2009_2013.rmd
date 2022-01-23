@@ -290,7 +290,7 @@ save(list = ls()[grep('^(covar_origin_10_|smerc_)', ls())],
 ```{r}
 #load('Scan_SMERC_2009_2013_Results.RData')
 #load('Scan_DCLUST_2009_2013_Results.RData')
-load(str_c(drive, '/Manuscript/Clustering_Base_sf_012122.RData'))
+load(str_c(drive, '/Manuscript/Clustering_Base_sf_012222.RData'))
 load(str_c(drive, 'Scan_SMERC_periods_1_3_vsets_1_2_allsex_Results.RData'))
 
 ```
@@ -327,7 +327,7 @@ tmap::tmap_arrange(
     tmap_smerc(covar_origin_10_fc, smerc_lung_3it_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(2009-2013, All sexes, Variable set 1)  ', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_lung_3it_v2, return_ellipses = TRUE) + 
-        tm_layout(title = 'Lung cancer incidence\n(2009-2013, All sexes, Variable set 1)  ', frame = FALSE),
+        tm_layout(title = 'Lung cancer incidence\n(2009-2013, All sexes, Variable set 2)  ', frame = FALSE),
     ncol = 3
 )
 
@@ -349,15 +349,15 @@ tmap::tmap_arrange(
         tm_layout(title = 'Lung cancer mortality\n(2004-2008, All sexes, Variable set 2)', frame = FALSE),
     ncol = 3
 )
-# tmap::tmap_arrange(
-#     tmap_smerc(covar_origin_10_fc, smerc_lung_3dtu, return_ellipses = TRUE) + 
-#         tm_layout(title = 'Lung cancer mortality\n(2009-2013, All sexes, Uncontrolled)  ', frame = FALSE),
-#     tmap_smerc(covar_origin_10_fc, smerc_lung_3dt_v1, return_ellipses = TRUE) + 
-#         tm_layout(title = 'Lung cancer mortality\n(2009-2013, All sexes, Variable set 1)', frame = FALSE),
-#     tmap_smerc(covar_origin_10_fc, smerc_lung_3dt_v2, return_ellipses = TRUE) + 
-#         tm_layout(title = 'Lung cancer mortality\n(2009-2013, All sexes, Variable set 2)', frame = FALSE),
-#     ncol = 2
-# )
+tmap::tmap_arrange(
+    tmap_smerc(covar_origin_10_fc, smerc_lung_3dtu, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer mortality\n(2009-2013, All sexes, Uncontrolled)  ', frame = FALSE),
+    tmap_smerc(covar_origin_10_fc, smerc_lung_3dt_v1, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer mortality\n(2009-2013, All sexes, Variable set 1)', frame = FALSE),
+    tmap_smerc(covar_origin_10_fc, smerc_lung_3dt_v2, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer mortality\n(2009-2013, All sexes, Variable set 2)', frame = FALSE),
+    ncol = 2
+)
 
 
 ```

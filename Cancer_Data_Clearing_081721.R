@@ -4,9 +4,8 @@ options(repos = 'https://cran.seoul.go.kr/')
 if (!require(pacman)) {install.packages('pacman')}
 p_load(tidyverse, sf, spdep, DCluster, rflexscan, tmap, dtplyr, fuzzyjoin, readxl, here)
 
-userid = 'isong'
-drive = sprintf('/mnt/c/Users/%s/OneDrive/NCC_Project/CancerClustering/', userid)
-geopath = sprintf('/mnt/c/Users/%s/OneDrive/Data/Korea/', userid)
+drive = sprintf('/mnt/c/Users/%s/OneDrive/NCC_Project/CancerClustering/', username)
+geopath = sprintf('/mnt/c/Users/%s/OneDrive/Data/Korea/', username)
 
 # # incidence
 # inc <- read.csv(paste(drive, 'cancerInc_sgg.csv', sep = ''), fileEncoding = 'EUC-KR')
@@ -192,7 +191,7 @@ pr_csvs = pr_csvs %>%
 
 
 # Conversion
-conv_table = read.csv(paste(sprintf("/mnt/c/Users/%s/OneDrive/Data/Korea/", userid), 'SGG_1995_2018_Conversion_Table_201108.csv', sep = ''), fileEncoding = 'EUC-KR')
+conv_table = read.csv(paste(dbdir, 'SGG_before_2022_Conversion_Table_220122_CConly.csv', sep = ''), fileEncoding = 'EUC-KR')
 conv_table_e = conv_table %>%
     filter(from_year >= 1999 & from_year <= 2013) %>%
     dplyr::select(fromcode, tocode)

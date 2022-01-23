@@ -6,7 +6,6 @@ if (!require(pacman)) {
 p_load(tidyverse, sf, DCluster, tmap, smerc, knitr, readxl, kableExtra, DClusterm, patchwork)
 p_load(stars, raster, starsExtra, here, stargazer)
 
-username = 'isong'
 basedir = sprintf('/mnt/c/Users/%s/', username)
 rdatafiles = list.files(path = str_c(basedir, 'Documents/GP/'), pattern = '*.RData', full.names = TRUE)
 geopath = str_c(basedir, "OneDrive/Data/Korea/")
@@ -21,7 +20,7 @@ mor_to <- read.csv(paste(drive, "cancerMor_sgg_total.csv", sep = ""), fileEncodi
 mor_me <- read.csv(paste(drive, "cancerMor_sgg_male.csv", sep = ""), fileEncoding = "EUC-KR")
 mor_fe <- read.csv(paste(drive, "cancerMor_sgg_female.csv", sep = ""), fileEncoding = "EUC-KR")
 
-conv_table = read.csv(paste(geopath, 'SGG_1995_2018_Conversion_Table_201108.csv', sep = ''), fileEncoding = 'EUC-KR')
+conv_table = read.csv(paste(dbdir, 'SGG_before_2022_Conversion_Table_220122_CConly.csv', sep = ''), fileEncoding = 'EUC-KR')
 # total population for the expected values
 # sex code: 0(all), 1(male), 2(female)
 pop <- read.csv(paste(drive, "Midyear_Population_1998_2019.csv", sep = ""), fileEncoding = "UTF-8") %>%
@@ -40,16 +39,17 @@ colnames(mor_fe) <- c("cause0", "cause", "sgg_cd", "sgg_nm", "sex0", "sex", "typ
 
 
 ## Data preprocessing ####
-sgg <- st_read(paste(geopath, "SGG_Merge_2000_2016.shp", sep = ""))
-sgg2010 <- sgg %>%
-    filter(BASE_YEAR == 2010)
+#sgg <- st_read(paste(geopath, "SGG_Merge_2000_2016.shp", sep = ""))
+#sgg2010 <- sgg %>%
+#    filter(BASE_YEAR == 2010)
 conv_table_e = conv_table %>%
-    filter(from_year >= 1999 & from_year <= 2013) %>%
+    filter(to_year >= 1999 & from_year <= 2013) %>%
     dplyr::select(fromcode, tocode)
 
 pop_cl = pop %>%
+    filter(year >= 1999 & year <= 2013) %>%
     mutate(sgg_cd = plyr::mapvalues(sgg_cd, conv_table_e$fromcode, conv_table_e$tocode),
-           year_agg = cut(year, breaks = c(1998,2003,2008,2013,2018,2019), labels = c('1999-2003', '2004-2008', '2009-2013', '2014-2018', '2019'), right = TRUE)) %>%
+           year_agg = cut(year, breaks = c(1998,2003,2008,2013), labels = c('1999-2003', '2004-2008', '2009-2013'), right = TRUE)) %>%
     group_by(year_agg, sgg_cd, sex0, sex_e) %>%
     summarize(population = sum(population, na.rm = TRUE)) %>%
     ungroup
@@ -65,7 +65,7 @@ inc_cl <- inc %>%
         sgg_cd_c = plyr::mapvalues(sgg_cd, conv_table_e$fromcode, conv_table_e$tocode)
     ) %>%
     # not sum
-    pivot_wider(id_cols = c(year, sgg_cd_c, cancer_type_e, sex_e), names_from = type_inc_e, values_from = n_n, values_fn = sum) %>%
+    pivot_wider(id_cols = c(year, sgg_cd_c, cancer_type_e, sex_e), names_from = type_inc_e, values_from = n_n, values_fn = function(x) sum(x, na.rm = TRUE)) %>%
     # note that sex-specific cancers have incorrect crude rates
     left_join(pop_cl, by = c('year' = 'year_agg', 'sgg_cd_c' = 'sgg_cd', 'sex_e' = 'sex_e')) %>%
     group_by(year, sgg_cd_c, cancer_type_e, sex_e) %>%
@@ -90,15 +90,16 @@ inc_cl_summary <- inc_cl %>%
 mor_cl = bind_rows(mor_to, mor_me) %>%
     bind_rows(mor_fe) %>%
     pivot_longer(cols = Y1998:Y2019) %>%
-    mutate(year = as.integer(str_sub(name, 2, 5)),
-           year_agg = cut(year, breaks = c(1998,2003,2008,2013,2018,2019), labels = c('1999-2003', '2004-2008', '2009-2013', '2014-2018', '2019'), right = TRUE),
+    mutate(year = as.integer(str_sub(name, 2, 5))) %>%
+    filter(year >= 1999 & year <= 2013) %>%
+    mutate(year_agg = cut(year, breaks = c(1998,2003,2008,2013), labels = c('1999-2003', '2004-2008', '2009-2013'), right = TRUE),
            cancer_type_e = plyr::mapvalues(cause, unique(cause), c("Stomach", "Colorectal", "Liver", "Lung/Bronchus", "Breast", "Cervical/Uterine", "Prostate")),
            sex_e = plyr::mapvalues(sex, unique(sex), c('Total', 'Male', 'Female')),
            type_mor_e = plyr::mapvalues(type0, c('T1', 'T4', 'T7'), c('N', 'r_crude', 'r_agest')),
            sgg_cd_c = plyr::mapvalues(sgg_cd, conv_table_e$fromcode, conv_table_e$tocode)
         ) %>%
     # not sum
-    pivot_wider(id_cols = c(year_agg, sgg_cd_c, cancer_type_e, sex_e), names_from = type_mor_e, values_from = value, values_fn = sum) %>%
+    pivot_wider(id_cols = c(year_agg, sgg_cd_c, cancer_type_e, sex_e), names_from = type_mor_e, values_from = value, values_fn = function(x) sum(x, na.rm = TRUE)) %>%
     left_join(pop_cl, by = c('year_agg' = 'year_agg', 'sgg_cd_c' = 'sgg_cd', 'sex_e' = 'sex_e')) %>%
     group_by(year_agg, sgg_cd_c, cancer_type_e, sex_e) %>%
     summarize(Ntotal = sum(N, na.rm = T),
@@ -218,8 +219,10 @@ pop_clw = pop_cl %>%
 ## Joined
 morinc_clw = mor_clw %>%
     full_join(inc_clw) %>%
-    full_join(pop_clw, by = c('sgg_cd_c' = 'sgg_cd')) %>%
+    left_join(pop_clw, by = c('sgg_cd_c' = 'sgg_cd')) %>%
     mutate(sgg_cd_c = plyr::mapvalues(sgg_cd_c, conv_table_e$fromcode, conv_table_e$tocode)) %>%
     group_by(sgg_cd_c) %>%
     summarize_all(list(~sum(., na.rm = TRUE))) %>%
-    ungroup
+    ungroup %>%
+    # Ulleung-gun period 2 incidence fix (012222)
+    mutate(n_i_Lung_female_2 = ifelse(sgg_cd_c == 37430, 3, n_i_Lung_female_2)) 

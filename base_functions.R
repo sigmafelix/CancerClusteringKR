@@ -550,7 +550,7 @@ regress_counts = function(data,
     #print(string_search)
     cns = colnames(data)[grep(string_search, colnames(data))]
     #print(cns)
-    form_pois = as.formula(str_c(yvar, '~', str_c(cns, collapse = '+')))
+    form_pois = as.formula(str_c(yvar, '~offset(log(', population, '))+', str_c(cns, collapse = '+')))
     reg_pois = glm(formula = form_pois, data= data, family = poisson(link = 'log'))
     return(reg_pois)
 }
@@ -575,12 +575,14 @@ run_smerc_cancertype = function(data = sgg2015,
     if (!adjust) {
         pop_in = unlist(data_df[, population])       
     }
+    css = unlist(data_df[, yvar])
     cls = parallel::makeCluster(spec = ncores, type = 'PSOCK')
     eltest = smerc::elliptic.test(st_coordinates(st_centroid(data)), 
-            cases = unlist(data_df[, yvar]), 
+            cases = css, 
             pop = pop_in,
-            shape = c(1, 1.5, 2, 2.5, 3, 4),
-            nangle = c(1, 4, 6, 10, 12, 12),
+            shape = c(1, 1.5, 2, 2.5, 3, 4, 6),
+            nangle = c(1, 4, 6, 8, 9, 12, 18),
+            min.cases = min(css) + 1,
             cl = cls)
     parallel::stopCluster(cls)
     return(eltest)

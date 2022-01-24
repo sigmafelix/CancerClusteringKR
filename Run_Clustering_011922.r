@@ -1,6 +1,6 @@
 ### Run Clustering Analysis
 ### 01/22/22
-username = 'sigma'
+username = 'isong'
 
 source('./base_functions.R')
 source('./Cleaning_Population_011922.r')
@@ -64,12 +64,12 @@ smerc_lung_1if_v1 = run_smerc_cancertype(data = covar_origin_00_fc, population =
 smerc_stom_1if_v1 = run_smerc_cancertype(data = covar_origin_00_fc, population = 'n_p_female_1', yvar = 'n_i_Stomach_female_1', sex_b = 'female', adjust = TRUE, string_search = vset1, ncores = 8L)
 
 # unadjusted
-smerc_lung_3itu = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yvar = 'n_i_Lung_total_3', sex_b = 'total', adjust = FALSE, ncores = 8L)
-smerc_stom_3itu = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yvar = 'n_i_Stomach_total_3', sex_b = 'total', adjust = FALSE, ncores = 8L)
-smerc_lung_2itu = run_smerc_cancertype(data = covar_origin_05_fc, population = 'n_p_total_2', yvar = 'n_i_Lung_total_2', sex_b = 'total', adjust = FALSE, ncores = 8L)
-smerc_stom_2itu = run_smerc_cancertype(data = covar_origin_05_fc, population = 'n_p_total_2', yvar = 'n_i_Stomach_total_2', sex_b = 'total', adjust = FALSE, ncores = 8L)
-smerc_lung_1itu = run_smerc_cancertype(data = covar_origin_00_fc, population = 'n_p_total_1', yvar = 'n_i_Lung_total_1', sex_b = 'total', adjust = FALSE, ncores = 8L)
-smerc_stom_1itu = run_smerc_cancertype(data = covar_origin_00_fc, population = 'n_p_total_1', yvar = 'n_i_Stomach_total_1', sex_b = 'total', adjust = FALSE, ncores = 8L)
+smerc_lung_3itu = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yvar = 'n_i_Lung_total_3', sex_b = 'total', adjust = FALSE, ncores = 16L)
+smerc_stom_3itu = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yvar = 'n_i_Stomach_total_3', sex_b = 'total', adjust = FALSE, ncores = 16L)
+smerc_lung_2itu = run_smerc_cancertype(data = covar_origin_05_fc, population = 'n_p_total_2', yvar = 'n_i_Lung_total_2', sex_b = 'total', adjust = FALSE, ncores = 16L)
+smerc_stom_2itu = run_smerc_cancertype(data = covar_origin_05_fc, population = 'n_p_total_2', yvar = 'n_i_Stomach_total_2', sex_b = 'total', adjust = FALSE, ncores = 16L)
+smerc_lung_1itu = run_smerc_cancertype(data = covar_origin_00_fc, population = 'n_p_total_1', yvar = 'n_i_Lung_total_1', sex_b = 'total', adjust = FALSE, ncores = 16L)
+smerc_stom_1itu = run_smerc_cancertype(data = covar_origin_00_fc, population = 'n_p_total_1', yvar = 'n_i_Stomach_total_1', sex_b = 'total', adjust = FALSE, ncores = 16L)
 
 smerc_lung_3imu = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_male_3', yvar = 'n_i_Lung_male_3', sex_b = 'male', adjust = FALSE, ncores = 8L)
 smerc_stom_3imu = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_male_3', yvar = 'n_i_Stomach_male_3', sex_b = 'male', adjust = FALSE, ncores = 8L)
@@ -123,7 +123,7 @@ smerc_stom_1df_v1 = run_smerc_cancertype(data = covar_origin_00_fc, population =
 smerc_lung_3dtu = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yvar = 'n_d_Lung_total_3', sex_b = 'total', adjust = FALSE, ncores = 8L)
 smerc_stom_3dtu = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yvar = 'n_d_Stomach_total_3', sex_b = 'total', adjust = FALSE, ncores = 8L)
 smerc_lung_2dtu = run_smerc_cancertype(data = covar_origin_05_fc, population = 'n_p_total_2', yvar = 'n_d_Lung_total_2', sex_b = 'total', adjust = FALSE, ncores = 8L)
-smerc_stom_2dtu = run_smerc_cancertype(data = covar_origin_05_fc, population = 'n_p_total_2', yvar = 'n_d_Stomach_total_2', sex_b = 'total', adjust = FALSE, ncores = 8L)
+smerc_stom_2dtu = run_smerc_cancertype(data = covar_origin_05_fc, population = 'n_p_total_2', yvar = 'n_d_Stomach_total_2', sex_b = 'total', adjust = FALSE, ncores = 16L)
 smerc_lung_1dtu = run_smerc_cancertype(data = covar_origin_00_fc, population = 'n_p_total_1', yvar = 'n_d_Lung_total_1', sex_b = 'total', adjust = FALSE, ncores = 8L)
 smerc_stom_1dtu = run_smerc_cancertype(data = covar_origin_00_fc, population = 'n_p_total_1', yvar = 'n_d_Stomach_total_1', sex_b = 'total', adjust = FALSE, ncores = 8L)
 

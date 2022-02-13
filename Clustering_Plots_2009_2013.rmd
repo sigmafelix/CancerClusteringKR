@@ -1,7 +1,7 @@
 ---
 title: "Covariate clearing"
 author: "Insang Song"
-date: 01-22-2022
+date: 02-12-2022
 theme: "spacelab"
 output:
   html_document:
@@ -291,7 +291,7 @@ save(list = ls()[grep('^(covar_origin_10_|smerc_)', ls())],
 #load('Scan_SMERC_2009_2013_Results.RData')
 #load('Scan_DCLUST_2009_2013_Results.RData')
 load(str_c(drive, '/Manuscript/Clustering_Base_sf_012222.RData'))
-load(str_c(drive, 'Scan_SMERC_periods_1_3_vsets_1_2_allsex_Results.RData'))
+load(str_c(drive, '/Manuscript/Scan_SMERC_periods_1_3_vsets_1_2_allsex_Results_p005.RData'))
 
 ```
 

@@ -560,6 +560,7 @@ run_smerc_cancertype = function(data = sgg2015,
                                 population = 'n_pop_total', 
                                 yvar = "Lung_total", 
                                 sex_b = 'total',
+                                alpha = 0.05,
                                 string_search = str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|'),
                                 add_var = NULL,
                                 adjust = FALSE, 
@@ -583,6 +584,8 @@ run_smerc_cancertype = function(data = sgg2015,
             shape = c(1, 1.5, 2, 2.5, 3, 4, 6),
             nangle = c(1, 4, 6, 8, 9, 12, 18),
             min.cases = min(css) + 1,
+            nsim = 999,
+            alpha = alpha,
             cl = cls)
     parallel::stopCluster(cls)
     return(eltest)
@@ -590,7 +593,7 @@ run_smerc_cancertype = function(data = sgg2015,
 
 
 # smerc cluster to general maps with a tmap object
-tmap_smerc = function(basemap, smc, threshold = 2, alpha = 0.3, return_ellipses = FALSE) {
+tmap_smerc = function(basemap, smc, threshold = 2, alpha = 0.2, return_ellipses = FALSE) {
     rotate = function(a) {a = a*pi/180; matrix(c(cos(a), sin(a), -sin(a), cos(a)), 2, 2)}
     
     library(tmap)
@@ -636,13 +639,15 @@ tmap_smerc = function(basemap, smc, threshold = 2, alpha = 0.3, return_ellipses 
                            p_value = x$pvalue)
                 return(ell)})
         smc_shps = do.call(rbind, smc_shps) %>%
-            mutate(cluster = seq_len(length(smc_pval_addr)))
+            mutate(cluster = seq_len(length(smc_pval_addr)),
+                   class_cl = c('#C41B40', rep('#D980AF', nrow(.)-1)))
         st_crs(smc_shps) = st_crs(basemap)
         #smc_shps = st_transform(smc_shps, st_crs(basemap))
         tm_cluster = tm_shape(basemap) +
             tm_borders(col = 'dark grey', lwd = 0.8) +
             tm_shape(smc_shps) +
-            tm_polygons('red', colorNA = 'transparent', border.col = 'red', lwd = 1.5, showNA = FALSE, alpha = alpha)
+            tm_fill('class_cl', colorNA = 'transparent', showNA = FALSE, alpha = alpha) +
+            tm_borders('#FF0000', lwd = 1.5)
         #tm_cluster = smc_shps
     }
 

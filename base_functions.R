@@ -397,7 +397,7 @@ get_basecovar = function(db_dir = dbdir,
         kcdc_covars = kcdc_list %>%
             lapply(function(x) x %>% 
                 mutate_at(.vars = vars(1:3), .funs = list(~gsub('[[:blank:]]|[가-힣]', '', .))) %>%
-                mutate(SR_2008 = ifelse(sum(grepl('SR_2008', colnames(x))) ==0, NA, SR_2008)) %>%
+                mutate(SR_2008 = if (sum(grepl('SR_2008', colnames(x))) ==0)  NA else SR_2008) %>%
                 transmute(SIGUNGU_KCDC = ifelse(sub_sigungu == '', sigungu, sub_sigungu),
                             SR = !!sym(str_c('SR_', target_year_kcdc)))) %>%
             mapply(function(x, y) {colnames(x)[2] = y; return(x)},
@@ -500,7 +500,7 @@ clean_consolidated = function(db_dir = dbdir, cleaned_df, target_year = 2010) {
                p_hbac_total = 100 * (n_bachelor_total + n_masters_total + n_doctorate_total) / n_total_6yo_total,
                p_hbac_male = 100 * (n_bachelor_male + n_masters_male + n_doctorate_male) / n_total_6yo_male,
                p_hbac_female = 100 * (n_bachelor_female + n_masters_female + n_doctorate_female) / n_total_6yo_female,
-               p_candiag_sto = ifelse(target_year >= 2008, 100 * n_candiag_sto_denom / n_candiag_sto_nom, NA)) %>%
+               p_candiag_sto = if (target_year >= 2008) 100 * n_candiag_sto_denom / n_candiag_sto_nom else NA) %>%
         dplyr::select(sgg_cd_c, starts_with('n_Stomach'), starts_with('n_Lung'), starts_with('p_hbac'), p_candiag_sto, starts_with('n_pop'), starts_with('p_65p'))
     # air pollution
     cleaned_df_apsum = cleaned_df %>%
@@ -548,7 +548,7 @@ regress_counts = function(data,
         string_search = str_replace(string_search, '\\^NDVI_\\)', str_c('^NDVI_|', add_var, ')'))
     }
     #print(string_search)
-    cns = colnames(data)[grep(string_search, colnames(data))]
+    cns = colnames(data)[grep(string_search, colnames(data), perl = TRUE)]
     #print(cns)
     form_pois = as.formula(str_c(yvar, '~offset(log(', population, '))+', str_c(cns, collapse = '+')))
     reg_pois = glm(formula = form_pois, data= data, family = poisson(link = 'log'))

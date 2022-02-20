@@ -1,7 +1,7 @@
 ---
 title: "Stomach and lung cancer incidence/mortality clustering results"
 author: "Insang Song"
-date: 02-12-2022
+date: 02-17-2022
 theme: "spacelab"
 output:
   html_document:
@@ -18,6 +18,9 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 - 02/12/2022
     - The default value of `alpha` in the package we use was 0.1; this documents is based on `alpha=0.05`.
     - Primary cluster (most significant cluster) has darker color (i.e., dark red)
+    
+- 02/17/2022    
+    - Variable sets 3 and 4 were applied
     - TODO: exclude isles and run period 3 analysis with available explanatory factors
 
 ```{r}
@@ -246,9 +249,10 @@ mor_clgg_r = mor_cl %>%
 ```{r}
 #load('Scan_SMERC_2009_2013_Results.RData')
 #load('Scan_DCLUST_2009_2013_Results.RData')
-load(str_c(drive, '/Manuscript/Clustering_Base_sf_012222.RData'))
-load(str_c(drive, '/Manuscript/Scan_SMERC_periods_1_3_vsets_1_2_Results_p005.RData'))
-
+load(str_c(drive, '/Manuscript/Clustering_Base_sf_021722.RData'))
+#load(str_c(drive, '/Manuscript/Scan_SMERC_periods_1_3_vsets_1_2_Results_p005.RData'))
+#load(str_c(drive, '/Manuscript/Scan_SMERC_periods_2_3_vsets_3_4_Results_p005.RData'))
+load(str_c(drive, '/Manuscript/Scan_SMERC_periods_1_3_vsets_1_4_Results_p005.RData'))
 ```
 
 # Overview
@@ -256,10 +260,12 @@ load(str_c(drive, '/Manuscript/Scan_SMERC_periods_1_3_vsets_1_2_Results_p005.RDa
 - All inclusive variables
     - Set 1: elderly population rate (%) and higher than bachelor's degree (%)
     - Set 2: Set 1 + including emission, residential exposure, and NDVI
+    - Set 3: for periods 2 and 3. All but insurance premium and stomach cancer screening
+    - Set 4: for period 3 only. All variables.
 
 # Lung Cancer
 ## All sexes
-```{r Lung cancer cluster plots, fig.width=8, fig.height = 10}
+```{r Lung cancer cluster plots, fig.width=10, fig.height = 10}
 tmap::tmap_arrange(
     tmap_smerc(covar_origin_00_fc, smerc_lung_1itu, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(1999-2003, All sexes, Uncontrolled)', frame = FALSE),
@@ -267,19 +273,28 @@ tmap::tmap_arrange(
         tm_layout(title = 'Lung cancer incidence\n(1999-2003, All sexes, Variable set 1)  ', frame = FALSE),
     tmap_smerc(covar_origin_00_fc, smerc_lung_1it_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(1999-2003, All sexes, Variable set 2)  ', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_lung_2itu, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(2004-2008, All sexes, Uncontrolled)', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_lung_2it_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(2004-2008, All sexes, Variable set 1)  ', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_lung_2it_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(2004-2008, All sexes, Variable set 2)  ', frame = FALSE),
+    tmap_smerc(covar_origin_05_fc, smerc_lung_2it_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer incidence\n(2004-2008, All sexes, Variable set 3)  ', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_lung_3itu, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(2009-2013, All sexes, Uncontrolled)', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_lung_3it_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(2009-2013, All sexes, Variable set 1)  ', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_lung_3it_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(2009-2013, All sexes, Variable set 2)  ', frame = FALSE),
-    ncol = 3
+    tmap_smerc(covar_origin_10_fc, smerc_lung_3it_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer incidence\n(2009-2013, All sexes, Variable set 3)  ', frame = FALSE),
+    tmap_smerc(covar_origin_10_fc, smerc_lung_3it_v4, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer incidence\n(2009-2013, All sexes, Variable set 4)  ', frame = FALSE),
+    ncol = 5
 )
 
 ## One-shot
@@ -290,26 +305,35 @@ tmap::tmap_arrange(
         tm_layout(title = 'Lung cancer mortality\n(1999-2003, All sexes, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_00_fc, smerc_lung_1dt_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(1999-2003, All sexes, Variable set 2)', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_lung_2dtu, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(2004-2008, All sexes, Uncontrolled)  ', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_lung_2dt_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(2004-2008, All sexes, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_lung_2dt_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(2004-2008, All sexes, Variable set 2)', frame = FALSE),
+    tmap_smerc(covar_origin_05_fc, smerc_lung_2dt_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer mortality\n(2004-2008, All sexes, Variable set 3)', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_lung_3dtu, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(2009-2013, All sexes, Uncontrolled)  ', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_lung_3dt_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(2009-2013, All sexes, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_lung_3dt_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(2009-2013, All sexes, Variable set 2)', frame = FALSE),
-    ncol = 3
+    tmap_smerc(covar_origin_10_fc, smerc_lung_3dt_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer mortality\n(2009-2013, All sexes, Variable set 3)', frame = FALSE),
+    tmap_smerc(covar_origin_10_fc, smerc_lung_3dt_v4, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer mortality\n(2009-2013, All sexes, Variable set 4)', frame = FALSE),
+    ncol = 5
 )
 
 
 ```
 
 ## Female
-```{r Lung: sex stratified (female), fig.width=8, fig.height = 10}
+```{r Lung: sex stratified (female), fig.width=10, fig.height = 10}
 
 tmap::tmap_arrange(
     tmap_smerc(covar_origin_00_fc, smerc_lung_1ifu, return_ellipses = TRUE) + 
@@ -318,19 +342,28 @@ tmap::tmap_arrange(
         tm_layout(title = 'Lung cancer incidence\n(1999-2003, Female, Variable set 1)  ', frame = FALSE),
     tmap_smerc(covar_origin_00_fc, smerc_lung_1if_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(1999-2003, Female, Variable set 2)  ', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_lung_2ifu, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(2004-2008, Female, Uncontrolled)', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_lung_2if_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(2004-2008, Female, Variable set 1)  ', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_lung_2if_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(2004-2008, Female, Variable set 2)  ', frame = FALSE),
+    tmap_smerc(covar_origin_05_fc, smerc_lung_2if_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer incidence\n(2004-2008, Female, Variable set 3)  ', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_lung_3ifu, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(2009-2013, Female, Uncontrolled)', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_lung_3if_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(2009-2013, Female, Variable set 1)  ', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_lung_3if_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(2009-2013, Female, Variable set 2)  ', frame = FALSE),
-    ncol = 3
+    tmap_smerc(covar_origin_10_fc, smerc_lung_3if_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer incidence\n(2009-2013, Female, Variable set 3)  ', frame = FALSE),
+    tmap_smerc(covar_origin_10_fc, smerc_lung_3if_v4, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer incidence\n(2009-2013, Female, Variable set 4)  ', frame = FALSE),
+    ncol = 5
 )
 
 ## One-shot
@@ -341,25 +374,34 @@ tmap::tmap_arrange(
         tm_layout(title = 'Lung cancer mortality\n(1999-2003, Female, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_00_fc, smerc_lung_1df_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(1999-2003, Female, Variable set 2)', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_lung_2dfu, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(2004-2008, Female, Uncontrolled)  ', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_lung_2df_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(2004-2008, Female, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_lung_2df_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(2004-2008, Female, Variable set 2)', frame = FALSE),
+    tmap_smerc(covar_origin_05_fc, smerc_lung_2df_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer mortality\n(2004-2008, Female, Variable set 3)', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_lung_3dfu, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(2009-2013, Female, Uncontrolled)  ', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_lung_3df_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(2009-2013, Female, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_lung_3df_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(2009-2013, Female, Variable set 2)', frame = FALSE),
-    ncol = 3
+    tmap_smerc(covar_origin_10_fc, smerc_lung_3df_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer mortality\n(2009-2013, Female, Variable set 3)', frame = FALSE),
+    tmap_smerc(covar_origin_10_fc, smerc_lung_3df_v4, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer mortality\n(2009-2013, Female, Variable set 4)', frame = FALSE),
+    ncol = 5
 )
 
 ```
 
 ## Male
-```{r Lung: sex stratified (male), fig.width=8, fig.height = 10}
+```{r Lung: sex stratified (male), fig.width=10, fig.height = 10}
 
 tmap::tmap_arrange(
     tmap_smerc(covar_origin_00_fc, smerc_lung_1imu, return_ellipses = TRUE) + 
@@ -368,19 +410,28 @@ tmap::tmap_arrange(
         tm_layout(title = 'Lung cancer incidence\n(1999-2003, Male, Variable set 1)  ', frame = FALSE),
     tmap_smerc(covar_origin_00_fc, smerc_lung_1im_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(1999-2003, Male, Variable set 2)  ', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_lung_2imu, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(2004-2008, Male, Uncontrolled)', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_lung_2im_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(2004-2008, Male, Variable set 1)  ', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_lung_2im_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(2004-2008, Male, Variable set 2)  ', frame = FALSE),
+    tmap_smerc(covar_origin_05_fc, smerc_lung_2im_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer incidence\n(2004-2008, Male, Variable set 3)  ', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_lung_3imu, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(2009-2013, Male, Uncontrolled)', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_lung_3im_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(2009-2013, Male, Variable set 1)  ', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_lung_3im_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer incidence\n(2009-2013, Male, Variable set 2)  ', frame = FALSE),
-    ncol = 3
+    tmap_smerc(covar_origin_10_fc, smerc_lung_3im_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer incidence\n(2009-2013, Male, Variable set 3)  ', frame = FALSE),
+    tmap_smerc(covar_origin_10_fc, smerc_lung_3im_v4, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer incidence\n(2009-2013, Male, Variable set 4)  ', frame = FALSE),
+    ncol = 5
 )
 
 ## One-shot
@@ -391,19 +442,28 @@ tmap::tmap_arrange(
         tm_layout(title = 'Lung cancer mortality\n(1999-2003, Male, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_00_fc, smerc_lung_1dm_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(1999-2003, Male, Variable set 2)', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_lung_2dmu, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(2004-2008, Male, Uncontrolled)  ', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_lung_2dm_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(2004-2008, Male, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_lung_2dm_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(2004-2008, Male, Variable set 2)', frame = FALSE),
+    tmap_smerc(covar_origin_05_fc, smerc_lung_2dm_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer mortality\n(2004-2008, Male, Variable set 3)', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_lung_3dmu, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(2009-2013, Male, Uncontrolled)  ', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_lung_3dm_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(2009-2013, Male, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_lung_3dm_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Lung cancer mortality\n(2009-2013, Male, Variable set 2)', frame = FALSE),
-    ncol = 3
+    tmap_smerc(covar_origin_10_fc, smerc_lung_3dm_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer mortality\n(2009-2013, Male, Variable set 3)', frame = FALSE),
+    tmap_smerc(covar_origin_10_fc, smerc_lung_3dm_v4, return_ellipses = TRUE) + 
+        tm_layout(title = 'Lung cancer mortality\n(2009-2013, Male, Variable set 4)', frame = FALSE),
+    ncol = 5
 )
 
 ```
@@ -411,7 +471,7 @@ tmap::tmap_arrange(
 
 # Stomach cancer
 ## All sexes
-```{r Stomach cancer cluster plots, fig.width=8, fig.height = 10}
+```{r Stomach cancer cluster plots, fig.width=12, fig.height = 9}
 tmap::tmap_arrange(
     tmap_smerc(covar_origin_00_fc, smerc_stom_1itu, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(1999-2003, All sexes, Uncontrolled)  ', frame = FALSE),
@@ -419,19 +479,28 @@ tmap::tmap_arrange(
         tm_layout(title = 'Stomach cancer incidence\n(1999-2003, All sexes, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_00_fc, smerc_stom_1it_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(1999-2003, All sexes, Variable set 2)', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_stom_2itu, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(2004-2008, All sexes, Uncontrolled)  ', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_stom_2it_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(2004-2008, All sexes, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_stom_2it_v2, return_ellipses = TRUE) + 
-        tm_layout(title = 'Stomach cancer incidence\n(2004-208, All sexes, Variable set 2)', frame = FALSE),
+        tm_layout(title = 'Stomach cancer incidence\n(2004-2008, All sexes, Variable set 2)', frame = FALSE),
+    tmap_smerc(covar_origin_05_fc, smerc_stom_2it_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Stomach cancer incidence\n(2004-2008, All sexes, Variable set 3)', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_stom_3itu, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(2009-2013, All sexes, Uncontrolled)  ', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_stom_3it_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(2009-2013, All sexes, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_stom_3it_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(2009-2013, All sexes, Variable set 2)', frame = FALSE),
-    ncol = 3
+    tmap_smerc(covar_origin_10_fc, smerc_stom_3it_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Stomach cancer incidence\n(2009-2013, All sexes, Variable set 3)', frame = FALSE),
+    tmap_smerc(covar_origin_10_fc, smerc_stom_3it_v4, return_ellipses = TRUE) + 
+        tm_layout(title = 'Stomach cancer incidence\n(2009-2013, All sexes, Variable set 4)', frame = FALSE),
+    ncol = 5
 )
 
 
@@ -442,25 +511,34 @@ tmap::tmap_arrange(
         tm_layout(title = 'Stomach cancer mortality\n(1999-2003, All sexes, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_00_fc, smerc_stom_1dt_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(1999-2003, All sexes, Variable set 2)', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_stom_2dtu, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(2004-2008, All sexes, Uncontrolled)  ', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_stom_2dt_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(2004-2008, All sexes, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_stom_2dt_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(2004-2008, All sexes, Variable set 2)', frame = FALSE),
+    tmap_smerc(covar_origin_05_fc, smerc_stom_2dt_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Stomach cancer mortality\n(2004-2008, All sexes, Variable set 3)', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_stom_3dtu, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(2009-2013, All sexes, Uncontrolled)  ', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_stom_3dt_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(2009-2013, All sexes, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_stom_3dt_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(2009-2013, All sexes, Variable set 2)', frame = FALSE),
-    ncol = 3
+    tmap_smerc(covar_origin_10_fc, smerc_stom_3dt_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Stomach cancer mortality\n(2009-2013, All sexes, Variable set 3)', frame = FALSE),
+    tmap_smerc(covar_origin_10_fc, smerc_stom_3dt_v4, return_ellipses = TRUE) + 
+        tm_layout(title = 'Stomach cancer mortality\n(2009-2013, All sexes, Variable set 4)', frame = FALSE),
+    ncol = 5
 )
 
 ```
 
 ## Female
-```{r Stomach (female), fig.width=8, fig.height = 10}
+```{r Stomach (female), fig.width=10, fig.height = 10}
 tmap::tmap_arrange(
     tmap_smerc(covar_origin_00_fc, smerc_stom_1ifu, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(1999-2003, Female, Uncontrolled)  ', frame = FALSE),
@@ -468,19 +546,28 @@ tmap::tmap_arrange(
         tm_layout(title = 'Stomach cancer incidence\n(1999-2003, Female, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_00_fc, smerc_stom_1if_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(1999-2003, Female, Variable set 2)', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_stom_2ifu, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(2004-2008, Female, Uncontrolled)  ', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_stom_2if_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(2004-2008, Female, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_stom_2if_v2, return_ellipses = TRUE) + 
-        tm_layout(title = 'Stomach cancer incidence\n(2004-208, Female, Variable set 2)', frame = FALSE),
+        tm_layout(title = 'Stomach cancer incidence\n(2004-2008, Female, Variable set 2)', frame = FALSE),
+    tmap_smerc(covar_origin_05_fc, smerc_stom_2if_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Stomach cancer incidence\n(2004-2008, Female, Variable set 3)', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_stom_3ifu, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(2009-2013, Female, Uncontrolled)  ', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_stom_3if_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(2009-2013, Female, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_stom_3if_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(2009-2013, Female, Variable set 2)', frame = FALSE),
-    ncol = 3
+    tmap_smerc(covar_origin_10_fc, smerc_stom_3if_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Stomach cancer incidence\n(2009-2013, Female, Variable set 3)', frame = FALSE),
+    tmap_smerc(covar_origin_10_fc, smerc_stom_3if_v4, return_ellipses = TRUE) + 
+        tm_layout(title = 'Stomach cancer incidence\n(2009-2013, Female, Variable set 4)', frame = FALSE),
+    ncol = 5
 )
 
 
@@ -491,19 +578,28 @@ tmap::tmap_arrange(
         tm_layout(title = 'Stomach cancer mortality\n(1999-2003, Female, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_00_fc, smerc_stom_1df_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(1999-2003, Female, Variable set 2)', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_stom_2dfu, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(2004-2008, Female, Uncontrolled)  ', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_stom_2df_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(2004-2008, Female, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_stom_2df_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(2004-2008, Female, Variable set 2)', frame = FALSE),
+    tmap_smerc(covar_origin_05_fc, smerc_stom_2df_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Stomach cancer mortality\n(2004-2008, Female, Variable set 3)', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_stom_3dfu, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(2009-2013, Female, Uncontrolled)  ', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_stom_3df_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(2009-2013, Female, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_stom_3df_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(2009-2013, Female, Variable set 2)', frame = FALSE),
-    ncol = 3
+    tmap_smerc(covar_origin_10_fc, smerc_stom_3df_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Stomach cancer mortality\n(2009-2013, Female, Variable set 3)', frame = FALSE),
+    tmap_smerc(covar_origin_10_fc, smerc_stom_3df_v4, return_ellipses = TRUE) + 
+        tm_layout(title = 'Stomach cancer mortality\n(2009-2013, Female, Variable set 4)', frame = FALSE),
+    ncol = 5
 )
 
 
@@ -511,7 +607,7 @@ tmap::tmap_arrange(
 
 
 ## Male
-```{r Stomach (Male), fig.width=8, fig.height = 10}
+```{r Stomach (Male), fig.width=10, fig.height = 10}
 tmap::tmap_arrange(
     tmap_smerc(covar_origin_00_fc, smerc_stom_1imu, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(1999-2003, Male, Uncontrolled)  ', frame = FALSE),
@@ -519,19 +615,28 @@ tmap::tmap_arrange(
         tm_layout(title = 'Stomach cancer incidence\n(1999-2003, Male, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_00_fc, smerc_stom_1im_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(1999-2003, Male, Variable set 2)', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_stom_2imu, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(2004-2008, Male, Uncontrolled)  ', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_stom_2im_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(2004-2008, Male, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_stom_2im_v2, return_ellipses = TRUE) + 
-        tm_layout(title = 'Stomach cancer incidence\n(2004-208, Male, Variable set 2)', frame = FALSE),
+        tm_layout(title = 'Stomach cancer incidence\n(2004-2008, Male, Variable set 2)', frame = FALSE),
+    tmap_smerc(covar_origin_05_fc, smerc_stom_2im_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Stomach cancer incidence\n(2004-2008, Male, Variable set 3)', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_stom_3imu, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(2009-2013, Male, Uncontrolled)  ', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_stom_3im_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(2009-2013, Male, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_stom_3im_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer incidence\n(2009-2013, Male, Variable set 2)', frame = FALSE),
-    ncol = 3
+    tmap_smerc(covar_origin_10_fc, smerc_stom_3im_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Stomach cancer incidence\n(2009-2013, Male, Variable set 3)', frame = FALSE),
+    tmap_smerc(covar_origin_10_fc, smerc_stom_3im_v4, return_ellipses = TRUE) + 
+        tm_layout(title = 'Stomach cancer incidence\n(2009-2013, Male, Variable set 4)', frame = FALSE),
+    ncol = 5
 )
 
 
@@ -542,19 +647,28 @@ tmap::tmap_arrange(
         tm_layout(title = 'Stomach cancer mortality\n(1999-2003, Male, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_00_fc, smerc_stom_1dm_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(1999-2003, Male, Variable set 2)', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_stom_2dmu, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(2004-2008, Male, Uncontrolled)  ', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_stom_2dm_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(2004-2008, Male, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_05_fc, smerc_stom_2dm_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(2004-2008, Male, Variable set 2)', frame = FALSE),
+    tmap_smerc(covar_origin_05_fc, smerc_stom_2dm_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Stomach cancer mortality\n(2004-2008, Male, Variable set 3)', frame = FALSE),
+    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_stom_3dmu, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(2009-2013, Male, Uncontrolled)  ', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_stom_3dm_v1, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(2009-2013, Male, Variable set 1)', frame = FALSE),
     tmap_smerc(covar_origin_10_fc, smerc_stom_3dm_v2, return_ellipses = TRUE) + 
         tm_layout(title = 'Stomach cancer mortality\n(2009-2013, Male, Variable set 2)', frame = FALSE),
-    ncol = 3
+    tmap_smerc(covar_origin_10_fc, smerc_stom_3dm_v3, return_ellipses = TRUE) + 
+        tm_layout(title = 'Stomach cancer mortality\n(2009-2013, Male, Variable set 3)', frame = FALSE),
+    tmap_smerc(covar_origin_10_fc, smerc_stom_3dm_v4, return_ellipses = TRUE) + 
+        tm_layout(title = 'Stomach cancer mortality\n(2009-2013, Male, Variable set 4)', frame = FALSE),
+    ncol = 5
 )
 
 

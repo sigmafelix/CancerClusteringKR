@@ -249,20 +249,24 @@ smerc_stom_2if_v3 = run_smerc_cancertype(data = covar_origin_05_fc, population =
 # Mortality (d)
 sex_bb = 'total'
 smerc_lung_3dt_v3 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yvar = 'n_d_Lung_total_3', sex_b = 'total', adjust = TRUE, string_search = vset3, ncores = NTHREADS)
-smerc_stom_3dt_v3 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yvar = 'n_d_Stomach_total_3', sex_b = 'total', adjust = TRUE, string_search = vset3, ncores = NTHREADS)
 smerc_lung_2dt_v3 = run_smerc_cancertype(data = covar_origin_05_fc, population = 'n_p_total_2', yvar = 'n_d_Lung_total_2', sex_b = 'total', adjust = TRUE, string_search = vset3, ncores = NTHREADS)
+
+
+smerc_stom_3dt_v3 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yvar = 'n_d_Stomach_total_3', sex_b = 'total', adjust = TRUE, string_search = vset3, ncores = NTHREADS)
 smerc_stom_2dt_v3 = run_smerc_cancertype(data = covar_origin_05_fc, population = 'n_p_total_2', yvar = 'n_d_Stomach_total_2', sex_b = 'total', adjust = TRUE, string_search = vset3, ncores = NTHREADS)
 
 sex_bb = 'male'
 smerc_lung_3dm_v3 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_male_3', yvar = 'n_d_Lung_male_3', sex_b = 'male', adjust = TRUE, string_search = vset3, ncores = NTHREADS)
-smerc_stom_3dm_v3 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_male_3', yvar = 'n_d_Stomach_male_3', sex_b = 'male', adjust = TRUE, string_search = vset3, ncores = NTHREADS)
 smerc_lung_2dm_v3 = run_smerc_cancertype(data = covar_origin_05_fc, population = 'n_p_male_2', yvar = 'n_d_Lung_male_2', sex_b = 'male', adjust = TRUE, string_search = vset3, ncores = NTHREADS)
+
+smerc_stom_3dm_v3 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_male_3', yvar = 'n_d_Stomach_male_3', sex_b = 'male', adjust = TRUE, string_search = vset3, ncores = NTHREADS)
 smerc_stom_2dm_v3 = run_smerc_cancertype(data = covar_origin_05_fc, population = 'n_p_male_2', yvar = 'n_d_Stomach_male_2', sex_b = 'male', adjust = TRUE, string_search = vset3, ncores = NTHREADS)
 
 sex_bb = 'female'
 smerc_lung_3df_v3 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_female_3', yvar = 'n_d_Lung_female_3', sex_b = 'female', adjust = TRUE, string_search = vset3, ncores = NTHREADS)
-smerc_stom_3df_v3 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_female_3', yvar = 'n_d_Stomach_female_3', sex_b = 'female', adjust = TRUE, string_search = vset3, ncores = NTHREADS)
 smerc_lung_2df_v3 = run_smerc_cancertype(data = covar_origin_05_fc, population = 'n_p_female_2', yvar = 'n_d_Lung_female_2', sex_b = 'female', adjust = TRUE, string_search = vset3, ncores = NTHREADS)
+
+smerc_stom_3df_v3 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_female_3', yvar = 'n_d_Stomach_female_3', sex_b = 'female', adjust = TRUE, string_search = vset3, ncores = NTHREADS)
 smerc_stom_2df_v3 = run_smerc_cancertype(data = covar_origin_05_fc, population = 'n_p_female_2', yvar = 'n_d_Stomach_female_2', sex_b = 'female', adjust = TRUE, string_search = vset3, ncores = NTHREADS)
 
 
@@ -275,32 +279,33 @@ smerc_stom_2df_v3 = run_smerc_cancertype(data = covar_origin_05_fc, population =
 # Available sociodemographic and environmental variables for all periods ####
 # Incidence (i)
 sex_bb = 'total'
-vset4 = str_c(str_c('^p_*.*_', sex_bb, '$'), '^r_', '^n_', '^ap_', '^NDVI_', sep = '|')
+vset4 = str_c(str_c('^p_*.*_', sex_bb, '$'), '^r_', '^n_pw', '^ap_', '^NDVI_', sep = '|')
+vset4_st = str_c(str_c('^p_*.*_', sex_bb, '$'), '^r_', '^p_candiag', '^n_pw', '^ap_', '^NDVI_', sep = '|')
 smerc_lung_3it_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yvar = 'n_i_Lung_total_3', sex_b = 'total', adjust = TRUE, string_search = vset4, ncores = NTHREADS)
-smerc_stom_3it_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yvar = 'n_i_Stomach_total_3', sex_b = 'total', adjust = TRUE, string_search = vset4, ncores = NTHREADS)
+smerc_stom_3it_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yvar = 'n_i_Stomach_total_3', sex_b = 'total', adjust = TRUE, string_search = vset4_st, ncores = NTHREADS)
 
 sex_bb = 'male'
 smerc_lung_3im_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_male_3', yvar = 'n_i_Lung_male_3', sex_b = 'male', adjust = TRUE, string_search = vset4, ncores = NTHREADS)
-smerc_stom_3im_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_male_3', yvar = 'n_i_Stomach_male_3', sex_b = 'male', adjust = TRUE, string_search = vset4, ncores = NTHREADS)
+smerc_stom_3im_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_male_3', yvar = 'n_i_Stomach_male_3', sex_b = 'male', adjust = TRUE, string_search = vset4_st, ncores = NTHREADS)
 
 sex_bb = 'female'
 smerc_lung_3if_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_female_3', yvar = 'n_i_Lung_female_3', sex_b = 'female', adjust = TRUE, string_search = vset4, ncores = NTHREADS)
-smerc_stom_3if_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_female_3', yvar = 'n_i_Stomach_female_3', sex_b = 'female', adjust = TRUE, string_search = vset4, ncores = NTHREADS)
+smerc_stom_3if_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_female_3', yvar = 'n_i_Stomach_female_3', sex_b = 'female', adjust = TRUE, string_search = vset4_st, ncores = NTHREADS)
 
 
 # Mortality (d)
 sex_bb = 'total'
 smerc_lung_3dt_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yvar = 'n_d_Lung_total_3', sex_b = 'total', adjust = TRUE, string_search = vset4, ncores = NTHREADS)
-smerc_stom_3dt_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yvar = 'n_d_Stomach_total_3', sex_b = 'total', adjust = TRUE, string_search = vset4, ncores = NTHREADS)
+smerc_stom_3dt_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yvar = 'n_d_Stomach_total_3', sex_b = 'total', adjust = TRUE, string_search = vset4_st, ncores = NTHREADS)
 
 sex_bb = 'male'
 smerc_lung_3dm_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_male_3', yvar = 'n_d_Lung_male_3', sex_b = 'male', adjust = TRUE, string_search = vset4, ncores = NTHREADS)
-smerc_stom_3dm_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_male_3', yvar = 'n_d_Stomach_male_3', sex_b = 'male', adjust = TRUE, string_search = vset4, ncores = NTHREADS)
+smerc_stom_3dm_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_male_3', yvar = 'n_d_Stomach_male_3', sex_b = 'male', adjust = TRUE, string_search = vset4_st, ncores = NTHREADS)
 
 sex_bb = 'female'
 smerc_lung_3df_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_female_3', yvar = 'n_d_Lung_female_3', sex_b = 'female', adjust = TRUE, string_search = vset4, ncores = NTHREADS)
-smerc_stom_3df_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_female_3', yvar = 'n_d_Stomach_female_3', sex_b = 'female', adjust = TRUE, string_search = vset4, ncores = NTHREADS)
+smerc_stom_3df_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_female_3', yvar = 'n_d_Stomach_female_3', sex_b = 'female', adjust = TRUE, string_search = vset4_st, ncores = NTHREADS)
 
 
 save(list = ls()[grep('^smerc_', ls())],
-     file = str_c(dbdir, 'Manuscript/Scan_SMERC_periods_2_3_vsets_3_4_Results_p005.RData'))
+     file = str_c(dbdir, 'Manuscript/Scan_SMERC_periods_1_3_vsets_1_4_Results_p005.RData'))

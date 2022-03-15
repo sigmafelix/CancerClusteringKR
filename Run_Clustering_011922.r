@@ -35,6 +35,16 @@ covar_origin_00_fc = clean_consolidated(cleaned_df = covar_origin_00, target_yea
 load(str_c(drive, "Manuscript/Clustering_Base_sf_021722.RData"))
 NTHREADS = 24L
 
+## Excluding Ongjin 23320 Ulleung 37430
+covar_origin_10_fc = covar_origin_10_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430))
+covar_origin_05_fc = covar_origin_05_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430))
+covar_origin_00_fc = covar_origin_00_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430))
+
+
+
 # Available sociodemographic variables (2) for all periods ####
 # Incidence (i)
 sex_bb = 'total'
@@ -308,4 +318,4 @@ smerc_stom_3df_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population =
 
 
 save(list = ls()[grep('^smerc_', ls())],
-     file = str_c(dbdir, 'Manuscript/Scan_SMERC_periods_1_3_vsets_1_4_Results_p005.RData'))
+     file = str_c(dbdir, 'Manuscript/Scan_SMERC_periods_1_3_vsets_1_4_Results_p001.RData'))

@@ -158,6 +158,7 @@ smerc_stom_1dfu = run_smerc_cancertype(data = covar_origin_00_fc, population = '
 
 # Available sociodemographic and environmental variables for all periods ####
 # Incidence (i)
+NTHREADS = 28
 sex_bb = 'total'
 vset2 = str_c(str_c('^p_*.*_', sex_bb, '$'), '^ap_', '^NDVI_', sep = '|')
 smerc_lung_3it_v2 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yvar = 'n_i_Lung_total_3', sex_b = 'total', adjust = TRUE, string_search = vset2, ncores = NTHREADS)
@@ -219,8 +220,8 @@ smerc_lung_1df_v2 = run_smerc_cancertype(data = covar_origin_00_fc, population =
 smerc_stom_1df_v2 = run_smerc_cancertype(data = covar_origin_00_fc, population = 'n_p_female_1', yvar = 'n_d_Stomach_female_1', sex_b = 'female', adjust = TRUE, string_search = vset2, ncores = NTHREADS)
 
 
-save(list = ls()[grep('^smerc_', ls())],
-     file = str_c(dbdir, 'Manuscript/Scan_SMERC_periods_1_3_vsets_1_2_Results_p005.RData'))
+#save(list = ls()[grep('^smerc_', ls())],
+#     file = str_c(dbdir, 'Manuscript/Scan_SMERC_periods_1_3_vsets_1_2_Results_p005.RData'))
 # save(list = ls()[grep('^dclust_*.*_[3]*.*', ls())],
 #      file = 'Scan_DCLUST_2009_2013_Results.RData')
 # save(list = ls()[grep('^(smerc|dclust|covar_origin_10_)', ls())],
@@ -318,4 +319,4 @@ smerc_stom_3df_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population =
 
 
 save(list = ls()[grep('^smerc_', ls())],
-     file = str_c(dbdir, 'Manuscript/Scan_SMERC_periods_1_3_vsets_1_4_Results_p001.RData'))
+     file = str_c(dbdir, 'Manuscript/Scan_SMERC_periods_1_3_vsets_1_4_Results_35p_p001.RData'))

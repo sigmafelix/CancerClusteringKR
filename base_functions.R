@@ -561,6 +561,7 @@ run_smerc_cancertype = function(data = sgg2015,
                                 yvar = "Lung_total", 
                                 sex_b = 'total',
                                 alpha = 0.01,
+                                ubpop = 0.35,
                                 string_search = str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|'),
                                 add_var = NULL,
                                 adjust = FALSE, 
@@ -583,6 +584,7 @@ run_smerc_cancertype = function(data = sgg2015,
             pop = pop_in,
             shape = c(1, 1.5, 2, 2.5, 3, 4, 6),
             nangle = c(1, 4, 6, 8, 9, 12, 18),
+            ubpop = ubpop,
             #min.cases = min(css) + 1,
             nsim = 999,
             alpha = alpha,
@@ -593,7 +595,7 @@ run_smerc_cancertype = function(data = sgg2015,
 
 
 # smerc cluster to general maps with a tmap object
-tmap_smerc = function(basemap, smc, threshold = 2, alpha = 0.2, return_ellipses = FALSE) {
+tmap_smerc = function(basemap, smc, threshold = 2, alpha = 0.4, return_ellipses = FALSE) {
     rotate = function(a) {a = a*pi/180; matrix(c(cos(a), sin(a), -sin(a), cos(a)), 2, 2)}
     
     library(tmap)
@@ -643,6 +645,10 @@ tmap_smerc = function(basemap, smc, threshold = 2, alpha = 0.2, return_ellipses 
                    class_cl = c('#C41B40', rep('#D980AF', nrow(.)-1)))
         st_crs(smc_shps) = st_crs(basemap)
         #smc_shps = st_transform(smc_shps, st_crs(basemap))
+        # mf_init(x = basemap)
+        # mf_map(basemap, add = TRUE)
+        # mf_map(smc_shps, type = 'typo', var = 'class_cl', leg_title = 'Primary', leg_pos = NA, alpha = 0.5,add = TRUE)
+        
         tm_cluster = tm_shape(basemap) +
             tm_borders(col = 'dark grey', lwd = 0.8) +
             tm_shape(smc_shps) +

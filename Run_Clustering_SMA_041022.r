@@ -1,6 +1,6 @@
 ### Run Clustering Analysis
 ### 04/10/22
-username = 'isong'
+username = 'sigma'
 
 source('./base_functions.R')
 source('./Cleaning_Population_011922.r')
@@ -33,15 +33,18 @@ covar_origin_00_fc = clean_consolidated(cleaned_df = covar_origin_00, target_yea
 # period 2 and 3 (v3): str_c(str_c('(^p_*.*_', sex_b, '$'), '^r_', '^ap_', '^NDVI_)', sep = '|')
 # period 3 only (v4): str_c(str_c('(^p_*.*_', sex_b, '$'), '^ap_', '^NDVI_', '^n_pw)', sep = '|')
 load(str_c(drive, "Manuscript/Clustering_Base_sf_021722.RData"))
-NTHREADS = 24L
+NTHREADS = 10L
 
 ## Excluding Ongjin 23320 Ulleung 37430
 covar_origin_10_fc = covar_origin_10_fc %>%
-    filter(!sgg_cd_c %in% c(23320, 37430))
+    filter(!sgg_cd_c %in% c(23320, 37430)) %>%
+    filter(grepl('^(11|31|23)', sgg_cd_c))
 covar_origin_05_fc = covar_origin_05_fc %>%
-    filter(!sgg_cd_c %in% c(23320, 37430))
+    filter(!sgg_cd_c %in% c(23320, 37430)) %>%
+    filter(grepl('^(11|31|23)', sgg_cd_c))
 covar_origin_00_fc = covar_origin_00_fc %>%
-    filter(!sgg_cd_c %in% c(23320, 37430))
+    filter(!sgg_cd_c %in% c(23320, 37430)) %>%
+    filter(grepl('^(11|31|23)', sgg_cd_c))
 
 
 
@@ -158,7 +161,7 @@ smerc_stom_1dfu = run_smerc_cancertype(data = covar_origin_00_fc, population = '
 
 # Available sociodemographic and environmental variables for all periods ####
 # Incidence (i)
-NTHREADS = 28
+NTHREADS = 12
 sex_bb = 'total'
 vset2 = str_c(str_c('^p_*.*_', sex_bb, '$'), '^ap_', '^NDVI_', sep = '|')
 smerc_lung_3it_v2 = run_smerc_cancertype(data = covar_origin_10_fc, population = 'n_p_total_3', yvar = 'n_i_Lung_total_3', sex_b = 'total', adjust = TRUE, string_search = vset2, ncores = NTHREADS)
@@ -319,4 +322,4 @@ smerc_stom_3df_v4 = run_smerc_cancertype(data = covar_origin_10_fc, population =
 
 
 save(list = ls()[grep('^smerc_', ls())],
-     file = str_c(dbdir, 'Manuscript/Scan_SMERC_periods_1_3_vsets_1_4_Results_35p_p001.RData'))
+     file = str_c(dbdir, 'Manuscript/Scan_SMERC_periods_1_3_vsets_1_4_Results_SMA_35p_p001.RData'))

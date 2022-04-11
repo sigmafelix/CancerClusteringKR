@@ -1,7 +1,7 @@
 ---
 title: "Stomach and lung cancer incidence/mortality clustering results"
 author: "Insang Song"
-date: 03-15-2022
+date: 04-10-2022
 theme: "spacelab"
 output:
   html_document:
@@ -26,6 +26,9 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 - 03/15/2022
     - Excluded isles
     - `alpha` from 0.05 to 0.01
+
+- 04/10/2022
+    - Changed the spatial extent as the Seoul Metropolitan Area
 
 ```{r}
 source('./base_functions.R')
@@ -256,7 +259,21 @@ mor_clgg_r = mor_cl %>%
 load(str_c(drive, '/Manuscript/Clustering_Base_sf_021722.RData'))
 #load(str_c(drive, '/Manuscript/Scan_SMERC_periods_1_3_vsets_1_2_Results_p005.RData'))
 #load(str_c(drive, '/Manuscript/Scan_SMERC_periods_2_3_vsets_3_4_Results_p005.RData'))
-load(str_c(drive, '/Manuscript/Scan_SMERC_periods_1_3_vsets_1_4_Results_p001.RData'))
+load(str_c(drive, '/Manuscript/Scan_SMERC_periods_1_3_vsets_1_4_Results_SMA_35p_p001.RData'))
+```
+
+```{r}
+
+## Excluding Ongjin 23320 Ulleung 37430
+covar_origin_10_fc = covar_origin_10_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430)) %>%
+    filter(grepl('^(11|31|23)', sgg_cd_c))
+covar_origin_05_fc = covar_origin_05_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430)) %>%
+    filter(grepl('^(11|31|23)', sgg_cd_c))
+covar_origin_00_fc = covar_origin_00_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430)) %>%
+    filter(grepl('^(11|31|23)', sgg_cd_c))
 ```
 
 # Overview

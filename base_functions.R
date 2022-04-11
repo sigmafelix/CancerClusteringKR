@@ -595,7 +595,7 @@ run_smerc_cancertype = function(data = sgg2015,
 
 
 # smerc cluster to general maps with a tmap object
-tmap_smerc = function(basemap, smc, threshold = 2, alpha = 0.4, return_ellipses = FALSE) {
+tmap_smerc = function(basemap, smc, threshold = 2, significance = 0.01, alpha = 0.4, return_ellipses = FALSE) {
     rotate = function(a) {a = a*pi/180; matrix(c(cos(a), sin(a), -sin(a), cos(a)), 2, 2)}
     
     library(tmap)
@@ -604,11 +604,17 @@ tmap_smerc = function(basemap, smc, threshold = 2, alpha = 0.4, return_ellipses 
     smc_ncl_addr = (smc_ncl >= threshold)
     # p-value extraction
     smc_pval = sapply(smc$clusters, function(x) x$pvalue)
-    smc_pval_addr = (smc_pval <= 0.05)
+    smc_pval_addr = (smc_pval <= significance)
     if (!is.null(threshold)) {
         smc_pval_addr = smc_pval_addr * smc_ncl_addr
     }
     smc_pval_addr = grep(1, as.integer(smc_pval_addr))
+
+    if (length(smc_pval_addr) == 0) {
+        tm_cluster = tm_shape(basemap) +
+            tm_borders(col = 'dark grey', lwd = 0.8)
+        return(tm_cluster)
+    }
 
     smc_shps = vector('list', length = length(smc_pval_addr))
     # loop through

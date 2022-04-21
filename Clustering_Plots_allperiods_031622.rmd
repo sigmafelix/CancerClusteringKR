@@ -34,7 +34,7 @@ if (!require(pacman)) { install.packages('pacman') }
 
 p_load(tidyverse, sf, stars, raster, starsExtra, readxl, here, tmap, stargazer, smerc, DClusterm, kableExtra, patchwork, rmapshaper)
 
-username = 'isong'
+username = 'sigma'
 basedir = sprintf('/mnt/c/Users/%s/', username)
 rdatafiles = list.files(path = str_c(basedir, 'Documents/GP/'), pattern = '*.RData', full.names = TRUE)
 geopath = str_c(basedir, "OneDrive/Data/Korea/")

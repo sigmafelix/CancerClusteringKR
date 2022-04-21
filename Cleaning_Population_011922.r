@@ -1,4 +1,5 @@
 ## Population covariates cleaning
+## Revised: 04/20/2022
 options(repos = "https://cran.seoul.go.kr/")
 if (!require(pacman)) {
     install.packages("pacman")
@@ -70,9 +71,10 @@ inc_cl <- inc %>%
     left_join(pop_cl, by = c('year' = 'year_agg', 'sgg_cd_c' = 'sgg_cd', 'sex_e' = 'sex_e')) %>%
     group_by(year, sgg_cd_c, cancer_type_e, sex_e) %>%
     summarize(Ntotal = sum(N, na.rm = T),
-              r_crude = sum(r_crude * (population / sum(population, na.rm = T)), na.rm = T)) %>%
+              r_crude = 1e5 * (sum(N, na.rm = TRUE) / sum(population, na.rm = T)),
+              r_agest = sum(r_agest * (population/sum(population, na.rm = T)), na.rm = TRUE)) %>%
     ungroup %>%
-    pivot_longer(cols = 5:6, values_to = 'n_n', names_to = 'type_inc_e')
+    pivot_longer(cols = 5:7, values_to = 'n_n', names_to = 'type_inc_e')
 
 # summary table
 inc_cl_summary <- inc_cl %>%
@@ -103,7 +105,8 @@ mor_cl = bind_rows(mor_to, mor_me) %>%
     left_join(pop_cl, by = c('year_agg' = 'year_agg', 'sgg_cd_c' = 'sgg_cd', 'sex_e' = 'sex_e')) %>%
     group_by(year_agg, sgg_cd_c, cancer_type_e, sex_e) %>%
     summarize(Ntotal = sum(N, na.rm = T),
-              r_crude = 1e5 * sum(N, na.rm = T)/sum(population, na.rm = T)) %>%
+              r_crude = 1e5 * sum(N, na.rm = T)/sum(population, na.rm = T),
+              r_agest = sum(r_agest * (population/sum(population, na.rm = T)), na.rm = TRUE)) %>%
     ungroup %>%
     filter(year_agg %in% c('1999-2003', '2004-2008', '2009-2013'))
 
@@ -177,21 +180,36 @@ mor_cl = bind_rows(mor_to, mor_me) %>%
 
 
 ### Incidence-Mortality consolidation ####
-## Mortality
+## Mortality (number)
 mor_clw = mor_cl %>%
     filter(cancer_type_e %in% c('Stomach', 'Lung/Bronchus')) %>%
     mutate(sex_e = tolower(sex_e),
            cancer_type_e = ifelse(cancer_type_e == 'Lung/Bronchus', 'Lung', cancer_type_e)) %>%
     rename(n = Ntotal) %>%
     mutate(period = plyr::mapvalues(year_agg, unique(year_agg), seq_len(length(unique(year_agg))))) %>%
-    dplyr::select(-year_agg, -r_crude) %>%
+    dplyr::select(-year_agg, -r_crude, -r_agest) %>%
     filter(period %in% 1:3) %>%
     pivot_wider(names_from = c(cancer_type_e, sex_e, period),
                 names_sep = "_",
                 names_prefix = 'n_d_',
                 values_from = n)    
+## Mortality (age standardized rate)
+mor_clwr = mor_cl %>%
+    filter(cancer_type_e %in% c('Stomach', 'Lung/Bronchus')) %>%
+    mutate(sex_e = tolower(sex_e),
+           cancer_type_e = ifelse(cancer_type_e == 'Lung/Bronchus', 'Lung', cancer_type_e)) %>%
+    rename(n = Ntotal) %>%
+    mutate(period = plyr::mapvalues(year_agg, unique(year_agg), seq_len(length(unique(year_agg))))) %>%
+    dplyr::select(-year_agg, -r_crude, -n) %>%
+    filter(period %in% 1:3) %>%
+    pivot_wider(names_from = c(cancer_type_e, sex_e, period),
+                names_sep = "_",
+                names_prefix = 'ragest_d_',
+                values_from = r_agest)    
 
-## Incidence
+
+
+## Incidence (Number)
 inc_clw = inc_cl %>%
     filter(cancer_type_e %in% c('Stomach', 'Lung') & type_inc_e == "Ntotal") %>%
     mutate(sex_e = tolower(sex_e),
@@ -203,6 +221,19 @@ inc_clw = inc_cl %>%
                 names_prefix = 'n_i_',
                 values_from = n_n)    
 
+inc_clwr = inc_cl %>%
+    filter(cancer_type_e %in% c('Stomach', 'Lung') & type_inc_e == "r_agest") %>%
+    mutate(sex_e = tolower(sex_e),
+           type_inc_e = 'n') %>%
+    mutate(period = plyr::mapvalues(year, unique(year), seq_len(length(unique(year))))) %>%
+    dplyr::select(-year, -type_inc_e) %>%
+    pivot_wider(names_from = c(cancer_type_e, sex_e, period),
+                names_sep = "_",
+                names_prefix = 'ragest_i_',
+                values_from = n_n)    
+
+
+
 ## Population (5-year aggregation)
 pop_clw = pop_cl %>%
     mutate(sex_e = tolower(sex_e),
@@ -213,16 +244,19 @@ pop_clw = pop_cl %>%
                 names_sep = "_",
                 names_prefix = 'n_p_',
                 values_from = population) %>%
-    dplyr::select(-ends_with('_NA'))
-
+    dplyr::select(-ends_with('_NA')) %>% ## this point was the last point
+    mutate(sgg_cd_c = plyr::mapvalues(sgg_cd, conv_table_e$fromcode, conv_table_e$tocode)) %>%
+    dplyr::select(-sgg_cd) %>%
+    group_by(sgg_cd_c) %>%
+    summarize_all(list(~sum(., na.rm = TRUE))) %>%
+    ungroup 
+    
 
 ## Joined
 morinc_clw = mor_clw %>%
     full_join(inc_clw) %>%
-    left_join(pop_clw, by = c('sgg_cd_c' = 'sgg_cd')) %>%
-    mutate(sgg_cd_c = plyr::mapvalues(sgg_cd_c, conv_table_e$fromcode, conv_table_e$tocode)) %>%
-    group_by(sgg_cd_c) %>%
-    summarize_all(list(~sum(., na.rm = TRUE))) %>%
-    ungroup %>%
+    full_join(mor_clwr) %>%
+    full_join(inc_clwr) %>%
+    full_join(pop_clw) %>%
     # Ulleung-gun period 2 incidence fix (012222)
     mutate(n_i_Lung_female_2 = ifelse(sgg_cd_c == 37430, 3, n_i_Lung_female_2)) 

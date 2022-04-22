@@ -1135,6 +1135,62 @@ tmap_smerc = function(basemap, smc, threshold = 2, significance = 0.01, alpha = 
     return(tm_cluster)
 }
 
+## Plot SaTScan results directly
+tmap_satscan = function(basemap, sats, threshold = 2, significance = 0.01, alpha = 0.4, return_ellipses = TRUE) {
+    rotate = function(a) {a = a*pi/180; matrix(c(cos(a), sin(a), -sin(a), cos(a)), 2, 2)}
+    
+    library(tmap)
+    basemap$cluster = NA
+
+    if (nrow(sats) == 0) {
+        tm_cluster = tm_shape(basemap) +
+            tm_borders(col = 'dark grey', lwd = 0.8)
+        return(tm_cluster)
+    }
+
+    nclust = nrow(sats)
+    smc_shps = vector('list', length = length(sats$pvalue))
+    # loop through
+    if (return_ellipses) {
+        smc_shps = 
+        sats %>%
+            split(., .$cluster) %>%
+            lapply(function(x) {
+                cntr = st_geometry(st_point(c(x$x, x$y)))
+                ell = (nngeo::st_ellipse(pnt = cntr,
+                                  ex = x$minor,
+                                  ey = x$major,
+                                  res = 80) - cntr) * rotate(x$angle) + cntr
+                ell = ell %>%
+                    st_sf %>%
+                    mutate(
+                           RR = x$LLR,
+                           statistic = x$stat_test,
+                           p_value = x$pvalue)
+                return(ell)})
+        smc_shps = do.call(rbind, smc_shps) %>%
+            mutate(cluster = seq_len(nclust),
+                   class_cl = c('#C41B40', rep(NA, nrow(.)-1))) #'#D980AF'
+        st_crs(smc_shps) = st_crs(basemap)
+        #smc_shps = st_transform(smc_shps, st_crs(basemap))
+        # mf_init(x = basemap)
+        # mf_map(basemap, add = TRUE)
+        # mf_map(smc_shps, type = 'typo', var = 'class_cl', leg_title = 'Primary', leg_pos = NA, alpha = 0.5,add = TRUE)
+        
+        tm_cluster = tm_shape(basemap) +
+            tm_borders(col = 'dark grey', lwd = 0.8) +
+            tm_shape(smc_shps) +
+            tm_fill('class_cl', colorNA = 'transparent', showNA = FALSE, alpha = alpha) +
+            tm_borders('#FF0000', lwd = 1.2)
+        #tm_cluster = smc_shps
+    }
+
+    # tmap
+    return(tm_cluster)
+}
+
+
+
 # Run dclustm analysis
 run_dclust_cancertype = function(
         data, 
@@ -1218,4 +1274,48 @@ tmap_dclust = function(basemap, dclust, threshold = 2, upto_n = NULL, alpha = 0.
 
     }
     return(tm_cluster)
+}
+
+
+
+## LISA mapping
+map_lisa = function(map, lisa.var, degree.s = 1, signif = 0.05, title = "") {
+    
+    map_df = st_drop_geometry(map)
+    lw = nb2listw(poly2nb(map), zero.policy = TRUE)
+    if (degree.s > 1) {
+        lw = nblag_cumul(nblag(poly2nb(map), degree.s))
+        lw = nb2listw(map[,id.col])
+    }
+    v.o = as.vector(scale(as.vector(map_df[,lisa.var])))
+    v.lag = lag.listw(lw, v.o, zero.policy = TRUE)
+    lisa_res = 
+        localmoran(v.o,
+                listw = lw,
+                zero.policy = TRUE)
+    lisa_resdf = as.data.frame(lisa_res)
+    colnames(lisa_resdf) = c("I", "EI", 'VarI', 'ZI', 'pvalue')
+
+    quadrant = vector(length = length(v.o))
+    quadrant[v.o >0 & v.lag>0] <- "HH"      
+    quadrant[v.o <0 & v.lag<0] <- "LL"     
+    quadrant[v.o <0 & v.lag>0] <- "LH"
+    quadrant[v.o >0 & v.lag<0] <- "HL"
+    quadrant[lisa_resdf[,5]>signif] <- "Insignificant"
+
+    colpal = c("blue", "deepskyblue1", "pink", "red", "white")
+    namepal = c("HH", "HL", "LH", "LL", "Insignificant")
+    vals_real = sort(unique(quadrant))
+    pal_fin = colpal[grep(str_c("(", str_c(vals_real, collapse = "|"), ")"), namepal)]
+
+    map_lisa = bind_cols(map, lisa_resdf)
+    map_lisa$LISA = factor(quadrant, levels = vals_real)
+    
+    maptitle = str_c("LISA Map ", title)
+    map_result = tm_shape(map_lisa) +
+        tm_fill("LISA", style = 'cat', palette = pal_fin) +
+        tm_borders('grey', lwd = 0.5) +
+        tm_layout(frame = FALSE, title = maptitle)
+    map_result
+ 
 }

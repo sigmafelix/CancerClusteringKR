@@ -669,6 +669,62 @@ tmap_smerc = function(basemap, smc, threshold = 2, significance = 0.01, alpha = 
     return(tm_cluster)
 }
 
+## Plot SaTScan results directly
+tmap_satscan = function(basemap, sats, threshold = 2, significance = 0.01, alpha = 0.4, return_ellipses = TRUE) {
+    rotate = function(a) {a = a*pi/180; matrix(c(cos(a), sin(a), -sin(a), cos(a)), 2, 2)}
+    
+    library(tmap)
+    basemap$cluster = NA
+
+    if (nrow(sats) == 0) {
+        tm_cluster = tm_shape(basemap) +
+            tm_borders(col = 'dark grey', lwd = 0.8)
+        return(tm_cluster)
+    }
+
+    nclust = nrow(sats)
+    smc_shps = vector('list', length = length(sats$pvalue))
+    # loop through
+    if (return_ellipses) {
+        smc_shps = 
+        sats %>%
+            split(., .$cluster) %>%
+            lapply(function(x) {
+                cntr = st_geometry(st_point(c(x$x, x$y)))
+                ell = (nngeo::st_ellipse(pnt = cntr,
+                                  ex = x$minor,
+                                  ey = x$major,
+                                  res = 80) - cntr) * rotate(x$angle) + cntr
+                ell = ell %>%
+                    st_sf %>%
+                    mutate(
+                           RR = x$LLR,
+                           statistic = x$stat_test,
+                           p_value = x$pvalue)
+                return(ell)})
+        smc_shps = do.call(rbind, smc_shps) %>%
+            mutate(cluster = seq_len(nclust),
+                   class_cl = c('#C41B40', rep(NA, nrow(.)-1))) #'#D980AF'
+        st_crs(smc_shps) = st_crs(basemap)
+        #smc_shps = st_transform(smc_shps, st_crs(basemap))
+        # mf_init(x = basemap)
+        # mf_map(basemap, add = TRUE)
+        # mf_map(smc_shps, type = 'typo', var = 'class_cl', leg_title = 'Primary', leg_pos = NA, alpha = 0.5,add = TRUE)
+        
+        tm_cluster = tm_shape(basemap) +
+            tm_borders(col = 'dark grey', lwd = 0.8) +
+            tm_shape(smc_shps) +
+            tm_fill('class_cl', colorNA = 'transparent', showNA = FALSE, alpha = alpha) +
+            tm_borders('#FF0000', lwd = 1.2)
+        #tm_cluster = smc_shps
+    }
+
+    # tmap
+    return(tm_cluster)
+}
+
+
+
 # Run dclustm analysis
 run_dclust_cancertype = function(
         data, 

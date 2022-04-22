@@ -25,10 +25,10 @@ flexrun = function(case_mat, coord_mat, adj_mat, name_vec, pop_mat) {
               scanmethod = 'FLEXIBLE',
               rantype = 'POISSON')
 }
-data = covar_origin_10_fc
-case_col = 'n_d_Stomach_total_3'
-            pop_col = 'n_p_total_3'
-            name_col = 'sgg_cd_c'
+# data = covar_origin_10_fc
+# case_col = 'n_d_Stomach_total_3'
+#             pop_col = 'n_p_total_3'
+#             name_col = 'sgg_cd_c'
             
 
 flexrun_sf = function(data, case_col, pop_col, name_col, covar_list = NULL, covar_control = FALSE, cl_size = 100) {
@@ -71,6 +71,8 @@ flexrun_sf = function(data, case_col, pop_col, name_col, covar_list = NULL, cova
 }
 
 ##
+RcppParallel::setThreadOptions(numThreads = 12)
+
 sex_bb = "total"
 vset4_st = str_c(str_c('^p_*.*_', sex_bb, '$'), '^r_', '^p_candiag', '^n_pw', '^ap_', '^NDVI_', sep = '|')
 cn_vset4 = colnames(covar_origin_10_fc)[grep(vset4_st, colnames(covar_origin_10_fc), perl = TRUE)]
@@ -84,7 +86,8 @@ rflex_stomach_dt_3_v4 =
             pop_col = 'n_p_total_3',
             name_col = 'sgg_cd_c',
             covar_list = cn_vset4,
-            covar_control = TRUE)
+            covar_control = TRUE,
+            cl_size = 100)
 rflex_stomach_dt_3_v4 %>% plot
 summary(rflex_stomach_dt_3_v4)
 choropleth(st_geometry(covar_origin_10_fc), rflex_stomach_dt_3_v4, pval = 0.05)

@@ -20,3 +20,17 @@ names(p1_resl)
 
 tmap_satscan(covar_origin_00_fc, p1_resl[[7]])
 tmap_satscan(covar_origin_00_fc, p1_resl[[13]])
+
+
+covar_origin_10_fc = covar_origin_10_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430))
+covar_origin_05_fc = covar_origin_05_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430))
+covar_origin_00_fc = covar_origin_00_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430))
+
+
+map_lisa(covar_origin_10_fc, "ragest_i_Lung_total_3")
+map_lisa(covar_origin_10_fc, "ragest_i_Lung_male_3")
+map_lisa(covar_origin_10_fc, "ragest_i_Lung_female_3")
+map_lisa(covar_origin_10_fc, "ragest_i_Lung_total_3")

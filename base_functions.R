@@ -809,3 +809,47 @@ tmap_dclust = function(basemap, dclust, threshold = 2, upto_n = NULL, alpha = 0.
     }
     return(tm_cluster)
 }
+
+
+
+## LISA mapping
+map_lisa = function(map, lisa.var, degree.s = 1, signif = 0.05, title = "") {
+    
+    map_df = st_drop_geometry(map)
+    lw = nb2listw(poly2nb(map), zero.policy = TRUE)
+    if (degree.s > 1) {
+        lw = nblag_cumul(nblag(poly2nb(map), degree.s))
+        lw = nb2listw(map[,id.col])
+    }
+    v.o = as.vector(scale(as.vector(map_df[,lisa.var])))
+    v.lag = lag.listw(lw, v.o, zero.policy = TRUE)
+    lisa_res = 
+        localmoran(v.o,
+                listw = lw,
+                zero.policy = TRUE)
+    lisa_resdf = as.data.frame(lisa_res)
+    colnames(lisa_resdf) = c("I", "EI", 'VarI', 'ZI', 'pvalue')
+
+    quadrant = vector(length = length(v.o))
+    quadrant[v.o >0 & v.lag>0] <- "HH"      
+    quadrant[v.o <0 & v.lag<0] <- "LL"     
+    quadrant[v.o <0 & v.lag>0] <- "LH"
+    quadrant[v.o >0 & v.lag<0] <- "HL"
+    quadrant[lisa_resdf[,5]>signif] <- "Insignificant"
+
+    colpal = c("blue", "deepskyblue1", "pink", "red", "white")
+    namepal = c("HH", "HL", "LH", "LL", "Insignificant")
+    vals_real = sort(unique(quadrant))
+    pal_fin = colpal[grep(str_c("(", str_c(vals_real, collapse = "|"), ")"), namepal)]
+
+    map_lisa = bind_cols(map, lisa_resdf)
+    map_lisa$LISA = factor(quadrant, levels = vals_real)
+    
+    maptitle = str_c("LISA Map ", title)
+    map_result = tm_shape(map_lisa) +
+        tm_fill("LISA", style = 'cat', palette = pal_fin) +
+        tm_borders('grey', lwd = 0.5) +
+        tm_layout(frame = FALSE, title = maptitle)
+    map_result
+ 
+}

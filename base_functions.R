@@ -555,6 +555,472 @@ regress_counts = function(data,
     return(reg_pois)
 }
 
+regress_rates = function(data, 
+                          population = NULL,
+                          yvar,
+                          sex_b,
+                          string_search = str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|'),
+                          add_var = NULL) {
+    if (!is.null(add_var)) {
+        string_search = str_replace(string_search, '\\^NDVI_\\)', str_c('^NDVI_|', add_var, ')'))
+    }
+    #print(string_search)
+    cns = colnames(data)[grep(string_search, colnames(data), perl = TRUE)]
+    #print(cns)
+    form_norm = as.formula(str_c(yvar, '~', str_c(cns, collapse = '+')))
+    reg_norm = lm(formula = form_norm, data= data)
+    return(reg_norm)
+}
+
+generate_satscan_prm = function(data,
+                    title.analysis,
+                    dir.base,
+                    dir.target,
+                    name.idcol,
+                    filename.input, filename.output,
+                    col.var, col.case,
+                    coord.x = "X", coord.y = "Y",
+                    prm.path,
+                    model = "normal",
+                    adjust = FALSE,
+                    string_search = str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|'),
+                    add_var = NULL,
+                    vset = NULL
+                    ) {
+    if (!file.exists(prm.path)) {
+        file.create(prm.path)
+    }
+    # If adjust, we replace the population with the "covariate-controlled" estimates
+    if (adjust) {
+        sex_t = str_extract(title.analysis, "(male|female|total)")
+        string_search =
+            switch(vset,
+                    set1 = str_c('^(p_65p|p_hbac)*.*_', sex_t, '$'),
+                    set2 = str_c(str_c('^p_*.*_', sex_t, '$'), '^ap_', '^NDVI_', sep = '|'),
+                    set3 = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_(?!physmid)', '^ap_', '^NDVI_', sep = '|'),
+                    set4 = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_', '^n_pw', '^ap_', '^NDVI_', sep = '|'))
+
+        if (model == "normal") {
+            lms = regress_rates(data = data,
+                        yvar = col.var,
+                        sex_b = sex_t,
+                        string_search = string_search)
+        } else if (model == "poisson") {
+            lms = regress_counts(data = data,
+                        yvar = col.var,
+                        population = col.case,
+                        sex_b = sex_t,
+                        string_search = string_search)
+        }
+        lmsfit = lms$fitted.values
+        data = data %>%
+            mutate("{{col.var}}" = lmsfit)
+        print(data[,col.var])
+    }
+
+    dcols = colnames(data)
+    fullpath.input = str_c(dir.base, filename.input)
+    fullpath.output = str_c(dir.target, filename.output)
+    indx.idcol = grep(name.idcol, dcols)
+    indx.case = grep(col.case, dcols)
+    indx.var = grep(col.var, dcols)
+    indx.xcoord = grep(str_c("^", coord.x, "$"), dcols)
+    indx.ycoord = grep(str_c("^", coord.y, "$"), dcols)
+
+    # print(fullpath.input)
+    # print(fullpath.output)
+    # print(indx.idcol)
+    # print(indx.case)
+    # print(indx.var)
+    # print(indx.xcoord)
+    # print(indx.ycoord)
+    modeltype = ifelse(model == "normal", 5, 1)
+
+    xml_analysis_block = str_glue(
+        '[Input]
+;case data filename
+CaseFile={fullpath.input}
+;source type (CSV=0, DBASE=1, SHAPE=2)
+CaseFile-SourceType=0
+;source field map (comma separated list of integers, oneCount, generatedId, shapeX, shapeY)
+CaseFile-SourceFieldMap={indx.idcol},{indx.case},,{indx.var}
+;csv source delimiter (leave empty for space or tab delimiter)
+CaseFile-SourceDelimiter=,
+;csv source group character
+CaseFile-SourceGrouper="
+;csv source skip initial lines (i.e. meta data)
+CaseFile-SourceSkip=0
+;csv source first row column header
+CaseFile-SourceFirstRowHeader=y
+;control data filename
+ControlFile=
+;time precision (0=None, 1=Year, 2=Month, 3=Day, 4=Generic)
+PrecisionCaseTimes=0
+;study period start date (YYYY/MM/DD)
+StartDate=2000/1/1
+;study period end date (YYYY/MM/DD)
+EndDate=2000/12/31
+;population data filename
+PopulationFile=
+;coordinate data filename
+CoordinatesFile={fullpath.input}
+;source type (CSV=0, DBASE=1, SHAPE=2)
+CoordinatesFile-SourceType=0
+;source field map (comma separated list of integers, oneCount, generatedId, shapeX, shapeY)
+CoordinatesFile-SourceFieldMap={indx.idcol},{indx.xcoord},{indx.ycoord}
+;csv source delimiter (leave empty for space or tab delimiter)
+CoordinatesFile-SourceDelimiter=,
+;csv source group character
+CoordinatesFile-SourceGrouper="
+;csv source skip initial lines (i.e. meta data)
+CoordinatesFile-SourceSkip=0
+;csv source first row column header
+CoordinatesFile-SourceFirstRowHeader=y
+;use grid file? (y/n)
+UseGridFile=n
+;grid data filename
+GridFile=
+;coordinate type (0=Cartesian, 1=latitude/longitude)
+CoordinatesType=0
+
+[Analysis]
+;analysis type (1=Purely Spatial, 2=Purely Temporal, 3=Retrospective Space-Time, 4=Prospective Space-Time, 5=Spatial Variation in Temporal Trends, 6=Prospective Purely Temporal, 7=Seasonal Temporal)
+AnalysisType=1
+;model type (0=Discrete Poisson, 1=Bernoulli, 2=Space-Time Permutation, 3=Ordinal, 4=Exponential, 5=Normal, 6=Continuous Poisson, 7=Multinomial, 8=Rank, 9=UniformTime)
+ModelType={modeltype}
+;scan areas (1=High Rates(Poison,Bernoulli,STP); High Values(Ordinal,Normal); Short Survival(Exponential); Higher Trend(Poisson-SVTT), 2=Low Rates(Poison,Bernoulli,STP); Low Values(Ordinal,Normal); Long Survival(Exponential); Lower Trend(Poisson-SVTT), 3=Both Areas)
+ScanAreas=1
+;time aggregation units (0=None, 1=Year, 2=Month, 3=Day, 4=Generic)
+TimeAggregationUnits=1
+;time aggregation length (Positive Integer)
+TimeAggregationLength=1
+
+[Output]
+;analysis main results output filename
+ResultsFile={fullpath.output}
+;output Google Earth KML file (y/n)
+OutputGoogleEarthKML=n
+;output shapefiles (y/n)
+OutputShapefiles=n
+;output cartesian graph file (y/n)
+OutputCartesianGraph=y
+;output cluster information in ASCII format? (y/n)
+MostLikelyClusterEachCentroidASCII=y
+;output cluster information in dBase format? (y/n)
+MostLikelyClusterEachCentroidDBase=n
+;output cluster case information in ASCII format? (y/n)
+MostLikelyClusterCaseInfoEachCentroidASCII=y
+;output cluster case information in dBase format? (y/n)
+MostLikelyClusterCaseInfoEachCentroidDBase=n
+;output location information in ASCII format? (y/n)
+CensusAreasReportedClustersASCII=n
+;output location information in dBase format? (y/n)
+CensusAreasReportedClustersDBase=n
+;output risk estimates in ASCII format? (y/n)
+IncludeRelativeRisksCensusAreasASCII=n
+;output risk estimates in dBase format? (y/n)
+IncludeRelativeRisksCensusAreasDBase=n
+;output simulated log likelihoods ratios in ASCII format? (y/n)
+SaveSimLLRsASCII=n
+;output simulated log likelihoods ratios in dBase format? (y/n)
+SaveSimLLRsDBase=n
+;generate Google Maps output (y/n)
+OutputGoogleMaps=n
+
+[Multiple Data Sets]
+; multiple data sets purpose type (0=Multivariate, 1=Adjustment)
+MultipleDataSetsPurposeType=0
+
+[Data Checking]
+;study period data check (0=Strict Bounds, 1=Relaxed Bounds)
+StudyPeriodCheckType=0
+;geographical coordinates data check (0=Strict Coordinates, 1=Relaxed Coordinates)
+GeographicalCoordinatesCheckType=0
+
+[Locations Network]
+;locations network filename
+LocationsNetworkFilename=
+;use locations network file
+UseLocationsNetworkFile=n
+;purpose of locations network file (0=Coordinates File Override, 1=Network Definition)
+PurposeLocationsNetworkFile=1
+
+[Spatial Neighbors]
+;use neighbors file (y/n)
+UseNeighborsFile=n
+;neighbors file
+NeighborsFilename=
+;use meta locations file (y/n)
+UseMetaLocationsFile=n
+;meta locations file
+MetaLocationsFilename=
+;multiple coordinates type (0=OnePerLocation, 1=AtLeastOneLocation, 2=AllLocations)
+MultipleCoordinatesType=0
+
+[Spatial Window]
+;maximum spatial size in population at risk (<=50%)
+MaxSpatialSizeInPopulationAtRisk=35
+;restrict maximum spatial size - max circle file? (y/n)
+UseMaxCirclePopulationFileOption=n
+;maximum spatial size in max circle population file (<=50%)
+MaxSpatialSizeInMaxCirclePopulationFile=35
+;maximum circle size filename
+MaxCirclePopulationFile=
+;restrict maximum spatial size - distance? (y/n)
+UseDistanceFromCenterOption=n
+;maximum spatial size in distance from center (positive integer)
+MaxSpatialSizeInDistanceFromCenter=1
+;include purely temporal clusters? (y/n)
+IncludePurelyTemporal=n
+;window shape (0=Circular, 1=Elliptic)
+SpatialWindowShapeType=1
+;elliptic non-compactness penalty (0=NoPenalty, 1=MediumPenalty, 2=StrongPenalty)
+NonCompactnessPenalty=1
+;isotonic scan (0=Standard, 1=Monotone)
+IsotonicScan=0
+
+[Temporal Window]
+;minimum temporal cluster size (in time aggregation units)
+MinimumTemporalClusterSize=1
+;how max temporal size should be interpretted (0=Percentage, 1=Time)
+MaxTemporalSizeInterpretation=0
+;maximum temporal cluster size (<=90%)
+MaxTemporalSize=50
+;include purely spatial clusters? (y/n)
+IncludePurelySpatial=n
+;temporal clusters evaluated (0=All, 1=Alive, 2=Flexible Window)
+IncludeClusters=0
+;flexible temporal window start range (YYYY/MM/DD,YYYY/MM/DD)
+IntervalStartRange=2000/1/1,2000/12/31
+;flexible temporal window end range (YYYY/MM/DD,YYYY/MM/DD)
+IntervalEndRange=2000/1/1,2000/12/31
+
+[Cluster Restrictions]
+;risk limit high clusters (y/n)
+RiskLimitHighClusters=n
+;risk threshold high clusters (1.0 or greater)
+RiskThresholdHighClusters=1
+;risk limit low clusters (y/n)
+RiskLimitLowClusters=n
+;risk threshold low clusters (0.000 - 1.000)
+RiskThresholdLowClusters=1
+;minimum cases in low rate clusters (positive integer)
+MinimumCasesInLowRateClusters=0
+;minimum cases in high clusters (positive integer)
+MinimumCasesInHighRateClusters=2
+
+[Space and Time Adjustments]
+;time trend adjustment type (0=None, 2=LogLinearPercentage, 3=CalculatedLogLinearPercentage, 4=TimeStratifiedRandomization, 5=CalculatedQuadratic, 1=TemporalNonparametric)
+TimeTrendAdjustmentType=0
+;time trend adjustment percentage (>-100)
+TimeTrendPercentage=0
+;time trend type - SVTT only (Linear=0, Quadratic=1)
+TimeTrendType=0
+;adjust for weekly trends, nonparametric
+AdjustForWeeklyTrends=n
+;spatial adjustments type (0=None, 1=SpatiallyStratifiedRandomization, 2=SpatialNonparametric)
+SpatialAdjustmentType=0
+;use adjustments by known relative risks file? (y/n)
+UseAdjustmentsByRRFile=n
+;adjustments by known relative risks file name (with HA Randomization=1)
+AdjustmentsByKnownRelativeRisksFilename=
+
+[Inference]
+;p-value reporting type (Default p-value=0, Standard Monte Carlo=1, Early Termination=2, Gumbel p-value=3) 
+PValueReportType=0
+;early termination threshold
+EarlyTerminationThreshold=50
+;report Gumbel p-values (y/n)
+ReportGumbel=n
+;Monte Carlo replications (0, 9, 999, n999)
+MonteCarloReps=999
+;adjust for earlier analyses(prospective analyses only)? (y/n)
+AdjustForEarlierAnalyses=n
+;prospective surveillance start date (YYYY/MM/DD)
+ProspectiveStartDate=2000/12/31
+;perform iterative scans? (y/n)
+IterativeScan=n
+;maximum iterations for iterative scan (0-32000)
+IterativeScanMaxIterations=10
+;max p-value for iterative scan before cutoff (0.000-1.000)
+IterativeScanMaxPValue=0.05
+
+[Cluster Drilldown]
+;perform detected cluster standard drilldown (y/n)
+PerformStandardDrilldown=n
+;perform detected cluster Bernoulli drilldown (y/n)
+PerformBernoulliDrilldown=n
+;minimum number of locations in detected cluster to perform drilldown (positive integer)
+DrilldownMinimumClusterLocations=2
+;minimum number of cases in detected cluster to perform drilldown (positive integer)
+DrilldownMinimumClusterCases=10
+;p-value cutoff of detected cluster to perform drilldown (0.000-1.000)
+DrilldownClusterPvalueCutoff=0.05
+;adjust for weekly trends, purely spatial Bernoulli drilldown
+DrilldownAdjustForWeeklyTrends=n
+
+[Miscellaneous Analysis]
+CalculateOliveira=n
+;number of bootstrap replications for Oliveira calculation (minimum=100, multiple of 100)
+NumBootstrapReplications=1000
+;p-value cutoff for clusters in Oliveira calculation (0.000-1.000)
+OliveiraPvalueCutoff=0.05
+;frequency of prospective analyses type (0=Same Time Aggregation, 1=Daily, 2=Weekly, 3=Monthy, 4=Quarterly, 5=Yearly)
+ProspectiveFrequencyType=0
+;frequency of prospective analyses  (positive integer)
+ProspectiveFrequency=1
+
+[Power Evaluation]
+;perform power evaluation - Poisson only (y/n)
+PerformPowerEvaluation=n
+;power evaluation method (0=Analysis And Power Evaluation Together, 1=Only Power Evaluation With Case File, 2=Only Power Evaluation With Defined Total Cases)
+PowerEvaluationsMethod=0
+;total cases in power evaluation
+PowerEvaluationTotalCases=600
+;critical value type (0=Monte Carlo, 1=Gumbel, 2=User Specified Values)
+CriticalValueType=0
+;power evaluation critical value .05 (> 0)
+CriticalValue05=0
+;power evaluation critical value .001 (> 0)
+CriticalValue01=0
+;power evaluation critical value .001 (> 0)
+CriticalValue001=0
+;power estimation type (0=Monte Carlo, 1=Gumbel)
+PowerEstimationType=0
+;number of replications in power step
+NumberPowerReplications=1000
+;power evaluation alternative hypothesis filename
+AlternativeHypothesisFilename=
+;power evaluation simulation method for power step (0=Null Randomization, 1=N/A, 2=File Import)
+PowerEvaluationsSimulationMethod=0
+;power evaluation simulation data source filename
+PowerEvaluationsSimulationSourceFilename=
+;report power evaluation randomization data from power step (y/n)
+ReportPowerEvaluationSimulationData=n
+;power evaluation simulation data output filename
+PowerEvaluationsSimulationOutputFilename=
+
+[Spatial Output]
+;automatically launch map viewer - gui only (y/n)
+LaunchMapViewer=n
+;create compressed KMZ file instead of KML file (y/n)
+CompressKMLtoKMZ=n
+;whether to include cluster locations kml output (y/n)
+IncludeClusterLocationsKML=n
+;threshold for generating separate kml files for cluster locations (positive integer)
+ThresholdLocationsSeparateKML=1000
+;report hierarchical clusters (y/n)
+ReportHierarchicalClusters=y
+;criteria for reporting secondary clusters(0=NoGeoOverlap, 1=NoCentersInOther, 2=NoCentersInMostLikely,  3=NoCentersInLessLikely, 4=NoPairsCentersEachOther, 5=NoRestrictions)
+CriteriaForReportingSecondaryClusters=1
+;report gini clusters (y/n)
+ReportGiniClusters=n
+;gini index cluster reporting type (0=optimal index only, 1=all values)
+GiniIndexClusterReportingType=0
+;spatial window maxima stops (comma separated decimal values[<=50%] )
+SpatialMaxima=1,2,3,4,5,6,8,10,12,15,20,25,30,40,50
+;max p-value for clusters used in calculation of index based coefficients (0.000-1.000)
+GiniIndexClustersPValueCutOff=0.05
+;report gini index coefficents to results file (y/n)
+ReportGiniIndexCoefficents=n
+;restrict reported clusters to maximum geographical cluster size? (y/n)
+UseReportOnlySmallerClusters=y
+;maximum reported spatial size in population at risk (<=50%)
+MaxSpatialSizeInPopulationAtRisk_Reported=35
+;restrict maximum reported spatial size - max circle file? (y/n)
+UseMaxCirclePopulationFileOption_Reported=n
+;maximum reported spatial size in max circle population file (<=50%)
+MaxSizeInMaxCirclePopulationFile_Reported=50
+;restrict maximum reported spatial size - distance? (y/n)
+UseDistanceFromCenterOption_Reported=n
+;maximum reported spatial size in distance from center (positive integer)
+MaxSpatialSizeInDistanceFromCenter_Reported=1
+
+[Temporal Output]
+;output temporal graph HTML file (y/n)
+OutputTemporalGraphHTML=n
+;temporal graph cluster reporting type (0=Only most likely cluster, 1=X most likely clusters, 2=Only significant clusters)
+TemporalGraphReportType=0
+;number of most likely clusters to report in temporal graph (positive integer)
+TemporalGraphMostMLC=1
+;significant clusters p-value cutoff to report in temporal graph (0.000-1.000)
+TemporalGraphSignificanceCutoff=0.05
+
+[Other Output]
+;report critical values for .01 and .05? (y/n)
+CriticalValue=n
+;report cluster rank (y/n)
+ReportClusterRank=n
+;print ascii headers in output files (y/n)
+PrintAsciiColumnHeaders=y
+;user-defined title for results file
+ResultsTitle={analysis.title2}
+
+[Elliptic Scan]
+;elliptic shapes - one value for each ellipse (comma separated decimal values)
+EllipseShapes=1.5,2,3,4,5,6
+;elliptic angles - one value for each ellipse (comma separated integer values)
+EllipseAngles=4,6,9,12,15,18
+
+[Power Simulations]
+;simulation methods (0=Null Randomization, 1=N/A, 2=File Import)
+SimulatedDataMethodType=0
+;simulation data input file name (with File Import=2)
+SimulatedDataInputFilename=
+;print simulation data to file? (y/n)
+PrintSimulatedDataToFile=n
+;simulation data output filename
+SimulatedDataOutputFilename=
+
+[Run Options]
+;number of parallel processes to execute (0=All Processors, x=At Most X Processors)
+NumberParallelProcesses=12
+;suppressing warnings? (y/n)
+SuppressWarnings=n
+;log analysis run to history file? (y/n)
+LogRunToHistoryFile=n
+;analysis execution method  (0=Automatic, 1=Successively, 2=Centrically)
+ExecutionType=0
+
+[System]
+;system setting - do not modify
+Version=10.0.2\\n',
+    fullpath.input = fullpath.input,
+    indx.idcol = indx.idcol,
+    indx.case = indx.case,
+    indx.var = indx.var,
+    modeltype = modeltype,
+    fullpath.output = fullpath.output,
+    indx.xcoord = indx.xcoord,
+    indx.ycoord = indx.ycoord,
+    analysis.title2 = str_c(title.analysis, "out.txt")
+    )
+    print(xml_analysis_block)
+    sink(file = prm.path)
+    cat(xml_analysis_block)
+    sink()
+
+    system(str_c("/home/felix/SaTScan/SaTScanBatch64 ", prm.path))
+    file.remove(prm.path)
+
+    ## Part 2: get tsv file
+    if (model == "poisson") {
+        cn = c('cluster', 'locid', 'x', 'y', 'minor', 'major', 'angle', 'shape',
+               'start_date', 'end_date', 'number_locs', 'LLR', 'pvalue', 'obs', 'ex', 'obsoverex', 'RR', 'pop')
+    } else if (model == "normal") {
+        cn = c('cluster', 'locid', 'x', 'y', 'minor', 'major', 'angle', 'shape',
+               'start_date', 'end_date', 'number_locs', 'LLR', 'stat_test', 'pvalue', 'observed', 'mean_in', 'mean_out', 'variance', 'std', 'GINI')
+    }
+    tss = read_fwf(str_c(dir.target, title.analysis, ".col.txt"), skip = 1)
+    colnames(tss) = cn
+    tss = tss %>% 
+        mutate(analysis_title = title.analysis) %>%
+        dplyr::select(analysis_title, 1:(ncol(.)-1))
+    
+    return(tss)
+    }
+
+
 # Run smerc elliptic.test
 run_smerc_cancertype = function(data = sgg2015, 
                                 population = 'n_pop_total', 

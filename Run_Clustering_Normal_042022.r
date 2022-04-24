@@ -33,7 +33,7 @@ covar_origin_00_fc = clean_consolidated(cleaned_df = covar_origin_00, target_yea
 # period 2 and 3 (v3): str_c(str_c('(^p_*.*_', sex_b, '$'), '^r_', '^ap_', '^NDVI_)', sep = '|')
 # period 3 only (v4): str_c(str_c('(^p_*.*_', sex_b, '$'), '^ap_', '^NDVI_', '^n_pw)', sep = '|')
 load(str_c(drive, "Manuscript/Clustering_Base_sf_042022.RData"))
-NTHREADS = 10L
+NTHREADS = 14L
 
 ## Excluding Ongjin 23320 Ulleung 37430
 covar_origin_10_fc = covar_origin_10_fc %>%

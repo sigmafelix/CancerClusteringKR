@@ -1,5 +1,11 @@
 ### Covariate processing (generalized)
 ### 01/22/2022
+PCTempDir <- Sys.getenv("TEMP")
+
+#detect and delete folders with pattern "Rtmp"
+folders <- dir(PCTempDir, pattern = "Rtmp", full.names = TRUE)
+unlink(folders, recursive = TRUE, force = TRUE, expand = TRUE)
+
 
 # Clean covariates: soon to be obsolete
 clean_covar = function(db_dir = dbdir,
@@ -590,10 +596,19 @@ generate_satscan_prm = function(data,
     if (!file.exists(prm.path)) {
         file.create(prm.path)
     }
+    dcols = colnames(data)
+    #fullpath.input0 = str_c(dir.base, filename.input)
+    fullpath.input = str_c(tempdir(), "/", filename.input)
+    fullpath.output = str_c(dir.target, filename.output)
+    indx.idcol = grep(name.idcol, dcols)
+    indx.case = grep(col.case, dcols)
+    indx.var = grep(col.var, dcols)
+    indx.xcoord = grep(str_c("^", coord.x, "$"), dcols)
+    indx.ycoord = grep(str_c("^", coord.y, "$"), dcols)
     # If adjust, we replace the population with the "covariate-controlled" estimates
     if (adjust) {
         sex_t = str_extract(title.analysis, "(male|female|total)")
-        string_search =
+        string_search_n =
             switch(vset,
                     set1 = str_c('^(p_65p|p_hbac)*.*_', sex_t, '$'),
                     set2 = str_c(str_c('^p_*.*_', sex_t, '$'), '^ap_', '^NDVI_', sep = '|'),
@@ -604,28 +619,19 @@ generate_satscan_prm = function(data,
             lms = regress_rates(data = data,
                         yvar = col.var,
                         sex_b = sex_t,
-                        string_search = string_search)
+                        string_search = string_search_n)
         } else if (model == "poisson") {
             lms = regress_counts(data = data,
                         yvar = col.var,
                         population = col.case,
                         sex_b = sex_t,
-                        string_search = string_search)
+                        string_search = string_search_n)
         }
         lmsfit = lms$fitted.values
         data = data %>%
-            mutate("{{col.var}}" = lmsfit)
-        print(data[,col.var])
+            mutate({{col.var}} := lmsfit)
+        write_csv(data, fullpath.input)
     }
-
-    dcols = colnames(data)
-    fullpath.input = str_c(dir.base, filename.input)
-    fullpath.output = str_c(dir.target, filename.output)
-    indx.idcol = grep(name.idcol, dcols)
-    indx.case = grep(col.case, dcols)
-    indx.var = grep(col.var, dcols)
-    indx.xcoord = grep(str_c("^", coord.x, "$"), dcols)
-    indx.ycoord = grep(str_c("^", coord.y, "$"), dcols)
 
     # print(fullpath.input)
     # print(fullpath.output)
@@ -958,9 +964,9 @@ ResultsTitle={analysis.title2}
 
 [Elliptic Scan]
 ;elliptic shapes - one value for each ellipse (comma separated decimal values)
-EllipseShapes=1.5,2,3,4,5,6
+EllipseShapes=1.5,2,2.5,3,4,5
 ;elliptic angles - one value for each ellipse (comma separated integer values)
-EllipseAngles=4,6,9,12,15,18
+EllipseAngles=4,6,8,9,12,15
 
 [Power Simulations]
 ;simulation methods (0=Null Randomization, 1=N/A, 2=File Import)
@@ -1296,25 +1302,25 @@ map_lisa = function(map, lisa.var, degree.s = 1, signif = 0.05, title = "") {
     lisa_resdf = as.data.frame(lisa_res)
     colnames(lisa_resdf) = c("I", "EI", 'VarI', 'ZI', 'pvalue')
 
-    quadrant = vector(length = length(v.o))
+    quadrant = rep(NA, length(v.o))
     quadrant[v.o >0 & v.lag>0] <- "HH"      
     quadrant[v.o <0 & v.lag<0] <- "LL"     
     quadrant[v.o <0 & v.lag>0] <- "LH"
     quadrant[v.o >0 & v.lag<0] <- "HL"
-    quadrant[lisa_resdf[,5]>signif] <- "Insignificant"
+    quadrant[!is.na(quadrant) & (lisa_resdf[,5]>signif)] <- NA
 
-    colpal = c("blue", "deepskyblue1", "pink", "red", "white")
-    namepal = c("HH", "HL", "LH", "LL", "Insignificant")
+    colpal = c("blue", "deepskyblue1", "pink", "red")
+    namepal = c("HH", "HL", "LH", "LL")
     vals_real = sort(unique(quadrant))
     pal_fin = colpal[grep(str_c("(", str_c(vals_real, collapse = "|"), ")"), namepal)]
 
     map_lisa = bind_cols(map, lisa_resdf)
     map_lisa$LISA = factor(quadrant, levels = vals_real)
     
-    maptitle = str_c("LISA Map ", title)
+    maptitle = str_c(title)
     map_result = tm_shape(map_lisa) +
-        tm_fill("LISA", style = 'cat', palette = pal_fin) +
-        tm_borders('grey', lwd = 0.5) +
+        tm_fill("LISA", style = 'cat', palette = pal_fin, colorNA = 'transparent', textNA = "Insignificant") +
+        tm_borders('grey', lwd = 0.66) +
         tm_layout(frame = FALSE, title = maptitle)
     map_result
  

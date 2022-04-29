@@ -591,20 +591,24 @@ generate_satscan_prm = function(data,
                     adjust = FALSE,
                     string_search = str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|'),
                     add_var = NULL,
-                    vset = NULL
+                    vset = NULL,
+                    for_residuals = TRUE
                     ) {
     if (!file.exists(prm.path)) {
         file.create(prm.path)
     }
     dcols = colnames(data)
     #fullpath.input0 = str_c(dir.base, filename.input)
-    fullpath.input = str_c(tempdir(), "/", filename.input)
+    fullpath.input = str_c(dir.base, filename.input)
     fullpath.output = str_c(dir.target, filename.output)
     indx.idcol = grep(name.idcol, dcols)
     indx.case = grep(col.case, dcols)
     indx.var = grep(col.var, dcols)
     indx.xcoord = grep(str_c("^", coord.x, "$"), dcols)
     indx.ycoord = grep(str_c("^", coord.y, "$"), dcols)
+    #file.copy(fullpath.input, str_c("/home/felix/Documents/", filename.input), overwrite = TRUE)
+    #file.copy(fullpath.input, )
+
     # If adjust, we replace the population with the "covariate-controlled" estimates
     if (adjust) {
         sex_t = str_extract(title.analysis, "(male|female|total)")
@@ -628,6 +632,9 @@ generate_satscan_prm = function(data,
                         string_search = string_search_n)
         }
         lmsfit = lms$fitted.values
+        if (for_residuals) {
+            lmsfit = residuals(lms)
+        }
         data = data %>%
             mutate({{col.var}} := lmsfit)
         write_csv(data, fullpath.input)

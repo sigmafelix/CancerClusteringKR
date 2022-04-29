@@ -39,7 +39,7 @@ p1_res = p1_res %>%
 
 p1_resl = p1_res %>% split(., .$analysis_title)
 
-names(p_v1_resl)
+# names(p_v1_resl)
 
 
 tmap_satscan(covar_origin_00_fc, p_v1_resl[[7]])

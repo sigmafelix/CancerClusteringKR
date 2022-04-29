@@ -927,15 +927,15 @@ ReportHierarchicalClusters=y
 ;criteria for reporting secondary clusters(0=NoGeoOverlap, 1=NoCentersInOther, 2=NoCentersInMostLikely,  3=NoCentersInLessLikely, 4=NoPairsCentersEachOther, 5=NoRestrictions)
 CriteriaForReportingSecondaryClusters=1
 ;report gini clusters (y/n)
-ReportGiniClusters=n
+ReportGiniClusters=y
 ;gini index cluster reporting type (0=optimal index only, 1=all values)
 GiniIndexClusterReportingType=0
 ;spatial window maxima stops (comma separated decimal values[<=50%] )
-SpatialMaxima=1,2,3,4,5,6,8,10,12,15,20,25,30,40,50
+SpatialMaxima=5,10,12,15,20,25,30,33,35,40,45,50
 ;max p-value for clusters used in calculation of index based coefficients (0.000-1.000)
 GiniIndexClustersPValueCutOff=0.05
 ;report gini index coefficents to results file (y/n)
-ReportGiniIndexCoefficents=n
+ReportGiniIndexCoefficents=y
 ;restrict reported clusters to maximum geographical cluster size? (y/n)
 UseReportOnlySmallerClusters=y
 ;maximum reported spatial size in population at risk (<=50%)
@@ -1149,7 +1149,7 @@ tmap_smerc = function(basemap, smc, threshold = 2, significance = 0.01, alpha = 
 }
 
 ## Plot SaTScan results directly
-tmap_satscan = function(basemap, sats, threshold = 2, significance = 0.01, alpha = 0.4, return_ellipses = TRUE) {
+tmap_satscan = function(basemap, sats, threshold = 2, significance = 0.01, alpha = 0.4, return_ellipses = TRUE, gini = TRUE) {
     rotate = function(a) {a = a*pi/180; matrix(c(cos(a), sin(a), -sin(a), cos(a)), 2, 2)}
     
     library(tmap)
@@ -1160,7 +1160,11 @@ tmap_satscan = function(basemap, sats, threshold = 2, significance = 0.01, alpha
             tm_borders(col = 'dark grey', lwd = 0.8)
         return(tm_cluster)
     }
-
+    if (gini) {
+        sats = sats %>% filter(GINI)
+    }
+    # test if the angle was weirdly reflected
+    sats = sats %>% mutate(angle = if_else(angle < 0, angle + 360, angle))
     nclust = nrow(sats)
     smc_shps = vector('list', length = length(sats$pvalue))
     # loop through
@@ -1183,19 +1187,28 @@ tmap_satscan = function(basemap, sats, threshold = 2, significance = 0.01, alpha
                 return(ell)})
         smc_shps = do.call(rbind, smc_shps) %>%
             mutate(cluster = seq_len(nclust),
-                   class_cl = c('#C41B40', rep(NA, nrow(.)-1))) #'#D980AF'
+                   class_cl = c('#C41B4050', rep(NA, nrow(.)-1))) #'#D980AF'
         st_crs(smc_shps) = st_crs(basemap)
         #smc_shps = st_transform(smc_shps, st_crs(basemap))
         # mf_init(x = basemap)
         # mf_map(basemap, add = TRUE)
         # mf_map(smc_shps, type = 'typo', var = 'class_cl', leg_title = 'Primary', leg_pos = NA, alpha = 0.5,add = TRUE)
         
-        tm_cluster = tm_shape(basemap) +
-            tm_borders(col = 'dark grey', lwd = 0.8) +
-            tm_shape(smc_shps) +
-            tm_fill('class_cl', colorNA = 'transparent', showNA = FALSE, alpha = alpha) +
-            tm_borders('#FF0000', lwd = 1.2)
-        #tm_cluster = smc_shps
+        if (nrow(smc_shps) == 1) {
+            tm_cluster = tm_shape(basemap) +
+                    tm_borders(col = 'dark grey', lwd = 0.8) +
+                    tm_shape(smc_shps[1,]) +
+                    tm_borders('#FF0000', lwd = 1.2) +
+                    tm_fill('class_cl', colorNA = 'transparent', showNA = FALSE)
+        } else {
+            tm_cluster = tm_shape(basemap) +
+                tm_borders(col = 'dark grey', lwd = 0.8) +
+                tm_shape(smc_shps[-1,]) +
+                tm_borders("#F200AA") +
+                tm_shape(smc_shps[1,]) +
+                tm_borders('#FF0000', lwd = 1.2) +
+                tm_fill('class_cl', colorNA = 'transparent', showNA = FALSE)
+        }
     }
 
     # tmap

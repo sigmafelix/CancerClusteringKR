@@ -1155,7 +1155,7 @@ tmap_satscan = function(basemap, sats, threshold = 2, significance = 0.01, alpha
     library(tmap)
     basemap$cluster = NA
 
-    if (nrow(sats) == 0 | sum(sats$GINI) == 0) {
+    if (nrow(sats) == 0) {
         tm_cluster = tm_shape(basemap) +
             tm_borders(col = 'dark grey', lwd = 0.8)
         return(tm_cluster)
@@ -1305,37 +1305,8 @@ tmap_dclust = function(basemap, dclust, threshold = 2, upto_n = NULL, alpha = 0.
 
 
 ## LISA mapping
-map_lisa = function(map, lisa.var, vset = NULL, degree.s = 1, signif = 0.05, title = "", special_label = TRUE, adjust = FALSE, for_residuals = TRUE) {
-
-    if (adjust) {
-        sex_t = str_extract(lisa.var, "(male|female|total)")
-        string_search_n =
-            switch(vset,
-                    set1 = str_c('^(p_65p|p_hbac)*.*_', sex_t, '$'),
-                    set2 = str_c(str_c('^p_*.*_', sex_t, '$'), '^ap_', '^NDVI_', sep = '|'),
-                    set3 = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_(?!physmid)', '^ap_', '^NDVI_', sep = '|'),
-                    set4 = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_', '^n_pw', '^ap_', '^NDVI_', sep = '|'))
-
-        if (model == "normal") {
-            lms = regress_rates(data = data,
-                        yvar = col.var,
-                        sex_b = sex_t,
-                        string_search = string_search_n)
-        } else if (model == "poisson") {
-            lms = regress_counts(data = data,
-                        yvar = col.var,
-                        population = col.case,
-                        sex_b = sex_t,
-                        string_search = string_search_n)
-        }
-        lmsfit = lms$fitted.values
-        if (for_residuals) {
-            lmsfit = residuals(lms)
-        }
-        map_df = map_df %>%
-            mutate({{lisa.var}} := lmsfit)
-    }
-
+map_lisa = function(map, lisa.var, degree.s = 1, signif = 0.05, title = "", special_label = TRUE) {
+    
     map_df = st_drop_geometry(map)
     lw = nb2listw(poly2nb(map), zero.policy = TRUE)
     if (degree.s > 1) {

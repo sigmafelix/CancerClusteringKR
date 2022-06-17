@@ -14,11 +14,12 @@
 ## - Plot district-level maps for low count groups
 
 #+ setup, include=F, echo=F
+# rmarkdown::render("/home/felix/GitHub/CancerClusteringKR/Code/Etc/Population_Data_Exploration_052622.r")
 source('../Base/base_functions.R')
 options(repos = 'https://cran.seoul.go.kr')
 if (!require(pacman)) { install.packages('pacman') } 
 
-p_load(tidyverse, sf, tmap, stargazer, smerc, DClusterm, kableExtra, patchwork, rmapshaper, spdep)
+p_load(tidyverse, sf, tmap, readxl, kableExtra, patchwork, rmapshaper, spdep, mapsf, rmarkdown)
 
 username = 'sigma'
 basedir = sprintf('/mnt/c/Users/%s/', username)
@@ -29,7 +30,7 @@ geopath = str_c(basedir, "OneDrive/Data/Korea/")
 dbdir = drive  
 rdsdir = sprintf("/mnt/c/Users/%s/OneDrive/NCC_Project/CancerClustering/", username)
 
-exceldir = str_c(drive, "/Data/Cancer/")
+exceldir = str_c(drive, "Data/Cancer/")
 
 ## Part 1: histogram for period by age and sex
 age_inc = readxl::read_excel(str_c(exceldir, "Incidence_Periods_Summary.xlsx"), sheet = 1) %>%
@@ -69,7 +70,7 @@ age_mor_gg =
     labs(title = "Mortality by age and sex",
          caption = "Periods 1-3 are 1999-2003, 2004-2008, and 2009-2013, respectively")
 
-#+ setup, include=F, echo=F, fig.width=7, fig.height=9
+#+ dist plots, include=F, echo=F, fig.width=7, fig.height=9
 age_inc_gg
 age_mor_gg
 
@@ -86,7 +87,7 @@ age_pop_clean = age_pop %>%
 # conversion table
 conv_table = read.csv(paste(geopath, 'SGG_1995_2018_Conversion_Table_201108.csv', sep = ''), fileEncoding = 'EUC-KR')
 conv_table_e = conv_table %>%
-    filter(from_year >= 1999 & from_year <= 2013) %>%
+    filter((from_year >= 1999 & from_year <= 2013) | tocode == 29010) %>%
     dplyr::select(fromcode, tocode)
 
 # Excluding integrated cities
@@ -109,7 +110,39 @@ sgg_poly = covar_origin_10_fc %>%
     ms_simplify(keep = 0.125, keep_shapes = TRUE)
 age_pop_clean_agg %>% dplyr::select(age, agecd) %>% unique %>% arrange(agecd) %>% data.frame
 age_pop_clean_w = age_pop_clean_agg %>%
-    mutate(agesex = str_c(sex, "_", agecd, "_", period)) %>%
-    filter(agecd %in% c('160','180','190','210', '370')) %>%
+    filter(agecd %in% c('130', '150','160','180','190','210', '360', '370')) %>%
+    mutate(agegroup = plyr::mapvalues(agecd, c('130', '150', '160','180','190','210', '360', '370'),
+                            c('2529', '3034', '3539', '4044', '4549', '5054', '8084', '85p')),
+           agesex = str_c(sex, "_", agegroup, "_", period)) %>%
     dplyr::select(sgg_cd_c, agesex, population) %>%
     pivot_wider(names_from = agesex, values_from = population)
+age_pop_clean_sf = sgg_poly %>%
+    left_join(age_pop_clean_w %>% mutate(sgg_cd_c = as.numeric(sgg_cd_c)))
+
+map_pop = function(sdf, col, brks = c(0, 1000, 5000, 20000, 35000, 100000, Inf)) {
+    sdf_selin = sdf %>% filter(grepl('^(11|23)', sgg_cd_c))
+    sdf_buul = sdf %>% filter(grepl('^(21|26)', sgg_cd_c))
+    
+    mapsf::mf_choro(sdf, var = col, breaks = 'jenks', nbreaks = 5, lwd = 0.1)
+    mf_title(col, pos = "left", tab = TRUE, cex = 1.2, line = 1, inner=FALSE) 
+    mf_inset_on(x = sdf_selin, pos = "topright", cex = .33)
+    # display the target municipality
+    mf_init(sdf_selin)
+    mapsf::mf_choro(sdf, var = col, breaks = 'jenks', nbreaks = 5, leg_pos = NA, lwd = 0.1, add = TRUE)
+    mf_title("Seoul-Incheon", pos = "left", tab = TRUE, cex = .9, line = 1, inner = TRUE)
+    # close the inset
+    mf_inset_off()
+    mf_inset_on(x = sdf_buul, pos = "bottomright", cex = .2)
+    # display the target municipality
+    mf_init(sdf_buul)
+    mapsf::mf_choro(sdf, var = col, breaks = 'jenks', nbreaks = 5, leg_pos=NA, lwd = 0.1, add = TRUE)
+    mf_title("Busan-Ulsan", pos = "left", tab = TRUE, cex = .9, line = 1, inner = TRUE)
+    # close the inset
+    mf_inset_off()
+
+}
+
+#+ sgg plot, echo=F, fig.width=10, fig.height=6
+for (i in colnames(age_pop_clean_w)[-1]) {
+    map_pop(age_pop_clean_sf, i)
+}

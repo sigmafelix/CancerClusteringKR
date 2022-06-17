@@ -606,6 +606,8 @@ generate_satscan_prm = function(data,
     indx.var = grep(col.var, dcols)
     indx.xcoord = grep(str_c("^", coord.x, "$"), dcols)
     indx.ycoord = grep(str_c("^", coord.y, "$"), dcols)
+    # weighted normal: 0 or 1
+    indx.casenormal = grep('case_normal', dcols)
     #file.copy(fullpath.input, str_c("/home/felix/Documents/", filename.input), overwrite = TRUE)
     #file.copy(fullpath.input, )
 
@@ -655,8 +657,8 @@ generate_satscan_prm = function(data,
 CaseFile={fullpath.input}
 ;source type (CSV=0, DBASE=1, SHAPE=2)
 CaseFile-SourceType=0
-;source field map (comma separated list of integers, oneCount, generatedId, shapeX, shapeY)
-CaseFile-SourceFieldMap={indx.idcol},{indx.case},,{indx.var}
+;source field map (comma separated list of integers, oneCount, generatedId, shapeX, shapeY) (id, case, date, attr, weight)
+CaseFile-SourceFieldMap={indx.idcol},{indx.casenormal},,{indx.var},{indx.case}
 ;csv source delimiter (leave empty for space or tab delimiter)
 CaseFile-SourceDelimiter=,
 ;csv source group character
@@ -927,7 +929,7 @@ ReportHierarchicalClusters=y
 ;criteria for reporting secondary clusters(0=NoGeoOverlap, 1=NoCentersInOther, 2=NoCentersInMostLikely,  3=NoCentersInLessLikely, 4=NoPairsCentersEachOther, 5=NoRestrictions)
 CriteriaForReportingSecondaryClusters=1
 ;report gini clusters (y/n)
-ReportGiniClusters=y
+ReportGiniClusters=n
 ;gini index cluster reporting type (0=optimal index only, 1=all values)
 GiniIndexClusterReportingType=0
 ;spatial window maxima stops (comma separated decimal values[<=50%] )
@@ -1002,6 +1004,7 @@ Version=10.0.2\\n',
     indx.idcol = indx.idcol,
     indx.case = indx.case,
     indx.var = indx.var,
+    indx.casenormal = indx.casenormal,
     modeltype = modeltype,
     fullpath.output = fullpath.output,
     indx.xcoord = indx.xcoord,
@@ -1022,7 +1025,7 @@ Version=10.0.2\\n',
                'start_date', 'end_date', 'number_locs', 'LLR', 'pvalue', 'obs', 'ex', 'obsoverex', 'RR', 'pop')
     } else if (model == "normal") {
         cn = c('cluster', 'locid', 'x', 'y', 'minor', 'major', 'angle', 'shape',
-               'start_date', 'end_date', 'number_locs', 'LLR', 'stat_test', 'pvalue', 'observed', 'mean_in', 'mean_out', 'variance', 'std', 'GINI')
+               'start_date', 'end_date', 'number_locs', 'LLR', 'stat_test', 'pvalue', 'observed', 'weight_in', 'mean_in', 'mean_out', 'variance', 'std', 'w_mean_in', 'w_mean_out', 'w_variance', 'w_std', 'GINI')
     }
     tss = read_fwf(str_c(dir.target, title.analysis, ".col.txt"), skip = 1)
     colnames(tss) = cn
@@ -1149,13 +1152,13 @@ tmap_smerc = function(basemap, smc, threshold = 2, significance = 0.01, alpha = 
 }
 
 ## Plot SaTScan results directly
-tmap_satscan = function(basemap, sats, threshold = 2, significance = 0.01, alpha = 0.4, return_ellipses = TRUE, gini = TRUE) {
+tmap_satscan = function(basemap, sats, threshold = 2, significance = 0.01, alpha = 0.4, return_ellipses = TRUE, gini = FALSE) {
     rotate = function(a) {a = a*pi/180; matrix(c(cos(a), sin(a), -sin(a), cos(a)), 2, 2)}
     
     library(tmap)
     basemap$cluster = NA
 
-    if (nrow(sats) == 0 | sum(sats$GINI) == 0) {
+    if (nrow(sats) == 0 | (gini & sum(sats$GINI) == 0)) {
         tm_cluster = tm_shape(basemap) +
             tm_borders(col = 'dark grey', lwd = 0.8)
         return(tm_cluster)

@@ -5,7 +5,7 @@
 
 library(pacman)
 p_load(stringr, readr, sf, dplyr)
-source("base_functions.R")
+source("./Code/Base/base_functions.R")
 load("/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/Manuscript/Clustering_Base_sf_042022.RData")
 
 covar_origin_00_fcd = covar_origin_00_fc %>% bind_cols(as.data.frame(st_coordinates(st_centroid(.)))) %>%
@@ -38,12 +38,17 @@ geoid = "sgg_cd_c"
 all_models = expand.grid(
     mid_title = c("_i_", "_d_"),
     cancertype = c("Lung", "Stomach"),
-    sex = c("_total_", "_male_", "_female_"),
+    sex = c("_male_", "_female_"), # excluded _total_ June 2022
     valuetype = c("asmr", "count"),
     period = 1:3
 ) %>%
     mutate(basename = str_c(mid_title, cancertype, sex, period),
            modeltitle = str_c(cancertype, "_p", period, mid_title, valuetype, sex))
+
+
+indx_p1 = 1:16
+indx_p2 = 17:32
+indx_p3 = 33:48
 
 # run for the period 1 (normal) ####
 p1_all = mapply(function(x, y) {
@@ -56,7 +61,7 @@ p1_all = mapply(function(x, y) {
                     col.case = str_c('n', x),
                     prm.path = "/home/felix/Documents/test.prm"
                     )
-}, all_models$basename[1:24], all_models$modeltitle[1:24], SIMPLIFY = FALSE)
+}, all_models$basename[indx_p1], all_models$modeltitle[indx_p1], SIMPLIFY = FALSE)
 
 p1_all_df = Reduce(rbind, p1_all)
 
@@ -71,7 +76,7 @@ p2_all = mapply(function(x, y) {
                     col.case = str_c('n', x),
                     prm.path = "/home/felix/Documents/test.prm"
                     )
-}, all_models$basename[25:48], all_models$modeltitle[25:48], SIMPLIFY = FALSE)
+}, all_models$basename[indx_p2], all_models$modeltitle[indx_p2], SIMPLIFY = FALSE)
 
 p2_all_df = Reduce(rbind, p2_all)
 
@@ -86,7 +91,7 @@ p3_all = mapply(function(x, y) {
                     col.case = str_c('n', x),
                     prm.path = "/mnt/c/Users/sigma/Documents/test.prm"
                     )
-}, all_models$basename[49:72], all_models$modeltitle[49:72], SIMPLIFY = FALSE)
+}, all_models$basename[indx_p3], all_models$modeltitle[indx_p3], SIMPLIFY = FALSE)
 
 p3_all_df = Reduce(rbind, p3_all)
 
@@ -115,7 +120,7 @@ p1_all_v1 = mapply(function(x, y) {
                     prm.path = "/mnt/c/Users/sigma/Documents/test.prm",
                     adjust = TRUE,
                     vset = "set1")
-}, all_models$basename[1:24], all_models$modeltitle[1:24], SIMPLIFY = FALSE)
+}, all_models$basename[indx_p1], all_models$modeltitle[indx_p1], SIMPLIFY = FALSE)
 
 p1_all_v1_df = Reduce(rbind, p1_all_v1)
 
@@ -132,7 +137,7 @@ p2_all_v1 = mapply(function(x, y) {
                     adjust = TRUE,
                     vset = 'set1'
                     )
-}, all_models$basename[25:48], all_models$modeltitle[25:48], SIMPLIFY = FALSE)
+}, all_models$basename[indx_p2], all_models$modeltitle[indx_p2], SIMPLIFY = FALSE)
 
 p2_all_v1_df = Reduce(rbind, p2_all_v1)
 
@@ -149,7 +154,7 @@ p3_all_v1 = mapply(function(x, y) {
                     adjust = TRUE,
                     vset = 'set1'
                     )
-}, all_models$basename[49:72], all_models$modeltitle[49:72], SIMPLIFY = FALSE)
+}, all_models$basename[indx_p3], all_models$modeltitle[indx_p3], SIMPLIFY = FALSE)
 
 p3_all_v1_df = Reduce(rbind, p3_all_v1)
 
@@ -171,7 +176,7 @@ p1_all_v2 = mapply(function(x, y) {
                     prm.path = "/mnt/c/Users/sigma/Documents/test.prm",
                     adjust = TRUE,
                     vset = "set2")
-}, all_models$basename[1:24], all_models$modeltitle[1:24], SIMPLIFY = FALSE)
+}, all_models$basename[indx_p1], all_models$modeltitle[indx_p1], SIMPLIFY = FALSE)
 
 p1_all_v2_df = Reduce(rbind, p1_all_v2)
 
@@ -188,7 +193,7 @@ p2_all_v2 = mapply(function(x, y) {
                     adjust = TRUE,
                     vset = 'set2'
                     )
-}, all_models$basename[25:48], all_models$modeltitle[25:48], SIMPLIFY = FALSE)
+}, all_models$basename[indx_p2], all_models$modeltitle[indx_p2], SIMPLIFY = FALSE)
 
 p2_all_v2_df = Reduce(rbind, p2_all_v2)
 
@@ -205,7 +210,7 @@ p3_all_v2 = mapply(function(x, y) {
                     adjust = TRUE,
                     vset = 'set2'
                     )
-}, all_models$basename[49:72], all_models$modeltitle[49:72], SIMPLIFY = FALSE)
+}, all_models$basename[indx_p3], all_models$modeltitle[indx_p3], SIMPLIFY = FALSE)
 
 p3_all_v2_df = Reduce(rbind, p3_all_v2)
 
@@ -228,7 +233,7 @@ p2_all_v3 = mapply(function(x, y) {
                     adjust = TRUE,
                     vset = 'set3'
                     )
-}, all_models$basename[25:48], all_models$modeltitle[25:48], SIMPLIFY = FALSE)
+}, all_models$basename[indx_p2], all_models$modeltitle[indx_p2], SIMPLIFY = FALSE)
 
 p2_all_v3_df = Reduce(rbind, p2_all_v3)
 
@@ -245,7 +250,7 @@ p3_all_v3 = mapply(function(x, y) {
                     adjust = TRUE,
                     vset = 'set3'
                     )
-}, all_models$basename[49:72], all_models$modeltitle[49:72], SIMPLIFY = FALSE)
+}, all_models$basename[indx_p3], all_models$modeltitle[indx_p3], SIMPLIFY = FALSE)
 
 p3_all_v3_df = Reduce(rbind, p3_all_v3)
 
@@ -266,7 +271,7 @@ p3_all_v4 = mapply(function(x, y) {
                     adjust = TRUE,
                     vset = 'set4'
                     )
-}, all_models$basename[49:72], all_models$modeltitle[49:72], SIMPLIFY = FALSE)
+}, all_models$basename[indx_p3], all_models$modeltitle[indx_p3], SIMPLIFY = FALSE)
 
 p3_all_v4_df = Reduce(rbind, p3_all_v4)
 write_rds(p3_all_v4_df, "/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/satscan_ASMR_vset4_resid.rds")

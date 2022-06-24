@@ -584,32 +584,55 @@ generate_satscan_prm = function(data,
                     dir.target,
                     name.idcol,
                     filename.input, filename.output,
-                    col.var, col.case,
+                    col.var, col.case, #col.weight = '',
                     coord.x = "X", coord.y = "Y",
                     prm.path,
-                    model = "normal",
+                    #model = "normal",
+                    weighted = TRUE,
                     adjust = FALSE,
                     string_search = str_c(str_c('(^p_*.*_', sex_b, '$'), '^(r_|ap_)', '^NDVI_)', sep = '|'),
                     add_var = NULL,
-                    vset = NULL,
-                    for_residuals = TRUE
+                    vset = NULL
                     ) {
     if (!file.exists(prm.path)) {
         file.create(prm.path)
     }
+    
     dcols = colnames(data)
+    iscount = grepl('_n_', title.analysis)
+    for_residuals = !iscount
     #fullpath.input0 = str_c(dir.base, filename.input)
     fullpath.input = str_c(dir.base, filename.input)
     fullpath.output = str_c(dir.target, filename.output)
     indx.idcol = grep(name.idcol, dcols)
-    indx.case = grep(col.case, dcols)
-    indx.var = grep(col.var, dcols)
+    indx.case = ifelse(iscount, grep(col.var, dcols), 
+        ifelse(weighted, grep(str_replace(col.var, "ragest_", "n_"), dcols),
+                grep('case_normal', dcols)))
+    # Soon to be deprecated: indx.weight and col.weight
+    indx.weight = ifelse(iscount | weighted, '', 
+                        str_c(",", grep(str_replace(col.var, "ragest_", "n_"), dcols)))
+    indx.var = ifelse(iscount, '', str_c(",,", grep(col.var, dcols)))
     indx.xcoord = grep(str_c("^", coord.x, "$"), dcols)
     indx.ycoord = grep(str_c("^", coord.y, "$"), dcols)
+    indx.year = grep("dummyyear", dcols)
+    filename.temp = str_replace(filename.input, "\\.csv", str_c("_", col.var, ".csv"))
+    fullpath.temp = str_c(dir.target, filename.temp)
+    file.copy(fullpath.input, fullpath.temp)
+
     # weighted normal: 0 or 1
-    indx.casenormal = grep('case_normal', dcols)
+    #indx.casenormal = grep('case_normal', dcols)
     #file.copy(fullpath.input, str_c("/home/felix/Documents/", filename.input), overwrite = TRUE)
     #file.copy(fullpath.input, )
+    if (iscount) {
+        indx.pop = grep(str_c("n_p", str_extract(title.analysis, "_(female|male|total)")), dcols)
+        line.popdef = str_c("PopulationFile=", fullpath.temp)
+        line.pop = "PopulationFile-SourceType=0"
+        line.popmap = str_c("PopulationFile-SourceFieldMap=", indx.idcol, ",", indx.year, ",", indx.pop)
+    } else {
+        line.popdef = "PopulationFile="
+        line.pop = "PopulationFile-SourceType="
+        line.popmap = "PopulationFile-SourceFieldMap="
+    }
 
     # If adjust, we replace the population with the "covariate-controlled" estimates
     if (adjust) {
@@ -621,27 +644,36 @@ generate_satscan_prm = function(data,
                     set3 = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_(?!physmid)', '^ap_', '^NDVI_', sep = '|'),
                     set4 = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_', '^n_pw', '^ap_', '^NDVI_', sep = '|'))
 
-        if (model == "normal") {
+        if (iscount) {
+            lms = regress_counts(data = data,
+                        yvar = col.var,
+                        population = dcols[indx.pop],
+                        sex_b = sex_t,
+                        string_search = string_search_n)
+            col.est = str_c(dcols[indx.pop], "_est")
+            lmsfit = lms$fitted.values
+            
+        } else {
+            # for rates, covariate control is always assumed to return residuals
             lms = regress_rates(data = data,
                         yvar = col.var,
                         sex_b = sex_t,
                         string_search = string_search_n)
-        } else if (model == "poisson") {
-            lms = regress_counts(data = data,
-                        yvar = col.var,
-                        population = col.case,
-                        sex_b = sex_t,
-                        string_search = string_search_n)
-        }
-        lmsfit = lms$fitted.values
-        if (for_residuals) {
             lmsfit = residuals(lms)
+            col.est = col.var
         }
         data = data %>%
-            mutate({{col.var}} := lmsfit)
-        write_csv(data, fullpath.input)
-    }
+            mutate({{col.est}} := lmsfit)
+        write_csv(data, fullpath.temp)
 
+        newdata = read_csv(fullpath.temp)
+        dcols.new = colnames(newdata)
+        if (iscount) {
+            indx.pop = grep(col.est, dcols.new)
+            line.popmap = str_c("PopulationFile-SourceFieldMap=", indx.idcol, ",", indx.year, ",", indx.pop)
+        }
+    }
+    
     # print(fullpath.input)
     # print(fullpath.output)
     # print(indx.idcol)
@@ -649,16 +681,16 @@ generate_satscan_prm = function(data,
     # print(indx.var)
     # print(indx.xcoord)
     # print(indx.ycoord)
-    modeltype = ifelse(model == "normal", 5, 1)
+    modeltype = ifelse(iscount, 0, 5)
 
     xml_analysis_block = str_glue(
         '[Input]
 ;case data filename
-CaseFile={fullpath.input}
+CaseFile={fullpath.temp}
 ;source type (CSV=0, DBASE=1, SHAPE=2)
 CaseFile-SourceType=0
 ;source field map (comma separated list of integers, oneCount, generatedId, shapeX, shapeY) (id, case, date, attr, weight)
-CaseFile-SourceFieldMap={indx.idcol},{indx.casenormal},,{indx.var},{indx.case}
+CaseFile-SourceFieldMap={indx.idcol},{indx.case}{indx.var}{indx.weight}
 ;csv source delimiter (leave empty for space or tab delimiter)
 CaseFile-SourceDelimiter=,
 ;csv source group character
@@ -676,9 +708,15 @@ StartDate=2000/1/1
 ;study period end date (YYYY/MM/DD)
 EndDate=2000/12/31
 ;population data filename
-PopulationFile=
+{line.popdef}
+;population source type
+{line.pop}
+;csv source first row column header
+PopulationFile-SourceFirstRowHeader=y
+;population source fieldmap (comma separated list)
+{line.popmap}
 ;coordinate data filename
-CoordinatesFile={fullpath.input}
+CoordinatesFile={fullpath.temp}
 ;source type (CSV=0, DBASE=1, SHAPE=2)
 CoordinatesFile-SourceType=0
 ;source field map (comma separated list of integers, oneCount, generatedId, shapeX, shapeY)
@@ -704,7 +742,7 @@ AnalysisType=1
 ;model type (0=Discrete Poisson, 1=Bernoulli, 2=Space-Time Permutation, 3=Ordinal, 4=Exponential, 5=Normal, 6=Continuous Poisson, 7=Multinomial, 8=Rank, 9=UniformTime)
 ModelType={modeltype}
 ;scan areas (1=High Rates(Poison,Bernoulli,STP); High Values(Ordinal,Normal); Short Survival(Exponential); Higher Trend(Poisson-SVTT), 2=Low Rates(Poison,Bernoulli,STP); Low Values(Ordinal,Normal); Long Survival(Exponential); Lower Trend(Poisson-SVTT), 3=Both Areas)
-ScanAreas=1
+ScanAreas=3
 ;time aggregation units (0=None, 1=Year, 2=Month, 3=Day, 4=Generic)
 TimeAggregationUnits=1
 ;time aggregation length (Positive Integer)
@@ -774,11 +812,11 @@ MultipleCoordinatesType=0
 
 [Spatial Window]
 ;maximum spatial size in population at risk (<=50%)
-MaxSpatialSizeInPopulationAtRisk=35
+MaxSpatialSizeInPopulationAtRisk=50
 ;restrict maximum spatial size - max circle file? (y/n)
 UseMaxCirclePopulationFileOption=n
 ;maximum spatial size in max circle population file (<=50%)
-MaxSpatialSizeInMaxCirclePopulationFile=35
+MaxSpatialSizeInMaxCirclePopulationFile=50
 ;maximum circle size filename
 MaxCirclePopulationFile=
 ;restrict maximum spatial size - distance? (y/n)
@@ -842,7 +880,7 @@ AdjustmentsByKnownRelativeRisksFilename=
 
 [Inference]
 ;p-value reporting type (Default p-value=0, Standard Monte Carlo=1, Early Termination=2, Gumbel p-value=3) 
-PValueReportType=0
+PValueReportType=3
 ;early termination threshold
 EarlyTerminationThreshold=50
 ;report Gumbel p-values (y/n)
@@ -856,7 +894,7 @@ ProspectiveStartDate=2000/12/31
 ;perform iterative scans? (y/n)
 IterativeScan=n
 ;maximum iterations for iterative scan (0-32000)
-IterativeScanMaxIterations=10
+IterativeScanMaxIterations=100
 ;max p-value for iterative scan before cutoff (0.000-1.000)
 IterativeScanMaxPValue=0.05
 
@@ -927,7 +965,7 @@ ThresholdLocationsSeparateKML=1000
 ;report hierarchical clusters (y/n)
 ReportHierarchicalClusters=y
 ;criteria for reporting secondary clusters(0=NoGeoOverlap, 1=NoCentersInOther, 2=NoCentersInMostLikely,  3=NoCentersInLessLikely, 4=NoPairsCentersEachOther, 5=NoRestrictions)
-CriteriaForReportingSecondaryClusters=1
+CriteriaForReportingSecondaryClusters=2
 ;report gini clusters (y/n)
 ReportGiniClusters=n
 ;gini index cluster reporting type (0=optimal index only, 1=all values)
@@ -939,13 +977,13 @@ GiniIndexClustersPValueCutOff=0.05
 ;report gini index coefficents to results file (y/n)
 ReportGiniIndexCoefficents=y
 ;restrict reported clusters to maximum geographical cluster size? (y/n)
-UseReportOnlySmallerClusters=y
+UseReportOnlySmallerClusters=n
 ;maximum reported spatial size in population at risk (<=50%)
 MaxSpatialSizeInPopulationAtRisk_Reported=35
 ;restrict maximum reported spatial size - max circle file? (y/n)
 UseMaxCirclePopulationFileOption_Reported=n
 ;maximum reported spatial size in max circle population file (<=50%)
-MaxSizeInMaxCirclePopulationFile_Reported=50
+MaxSizeInMaxCirclePopulationFile_Reported=35
 ;restrict maximum reported spatial size - distance? (y/n)
 UseDistanceFromCenterOption_Reported=n
 ;maximum reported spatial size in distance from center (positive integer)
@@ -1000,12 +1038,16 @@ ExecutionType=0
 [System]
 ;system setting - do not modify
 Version=10.0.2\\n',
-    fullpath.input = fullpath.input,
+    fullpath.temp = fullpath.temp,
     indx.idcol = indx.idcol,
     indx.case = indx.case,
     indx.var = indx.var,
+    #indx.year = indx.year,
     indx.casenormal = indx.casenormal,
     modeltype = modeltype,
+    line.popdef = line.popdef,
+    line.pop = line.pop,
+    line.popmap = line.popmap,
     fullpath.output = fullpath.output,
     indx.xcoord = indx.xcoord,
     indx.ycoord = indx.ycoord,
@@ -1017,13 +1059,18 @@ Version=10.0.2\\n',
     sink()
 
     system(str_c("/home/felix/SaTScan/SaTScanBatch64 ", prm.path))
+    cat(str_c("Remove the artifacts of the current analysis...\n"))
+    #file.copy(prm.path, str_c(dir.base, title.analysis, ".prm"))
     file.remove(prm.path)
+    #file.remove(fullpath.temp)
 
     ## Part 2: get tsv file
-    if (model == "poisson") {
+    if (modeltype == 0) {
+        dist.info = "Poisson"
         cn = c('cluster', 'locid', 'x', 'y', 'minor', 'major', 'angle', 'shape',
                'start_date', 'end_date', 'number_locs', 'LLR', 'pvalue', 'obs', 'ex', 'obsoverex', 'RR', 'pop')
-    } else if (model == "normal") {
+    } else if (modeltype == 5) {
+        dist.info = "Weighted normal"
         cn = c('cluster', 'locid', 'x', 'y', 'minor', 'major', 'angle', 'shape',
                'start_date', 'end_date', 'number_locs', 'LLR', 'stat_test', 'pvalue', 'observed', 'weight_in', 'mean_in', 'mean_out', 'variance', 'std', 'w_mean_in', 'w_mean_out', 'w_variance', 'w_std', 'GINI')
     }
@@ -1032,7 +1079,10 @@ Version=10.0.2\\n',
     tss = tss %>% 
         mutate(analysis_title = title.analysis) %>%
         dplyr::select(analysis_title, 1:(ncol(.)-1))
-    
+    cat(str_glue("Modeltype={modeltype} ({dist.info})\nTarget variable={col.var}\nFile written:{fullpath.temp}\n",
+                modeltype = modeltype, dist.info = dist.info, col.var = col.var, fullpath.temp = fullpath.temp))
+
+    system(str_glue("rm {dir.target}/*", dir.target = dir.target))
     return(tss)
     }
 

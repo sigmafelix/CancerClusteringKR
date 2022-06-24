@@ -134,13 +134,45 @@ fc00 = covar_origin_00_fc %>%
     filter(!sgg_cd_c %in% c(23320, 37430) & !grepl('^(39)', sgg_cd_c)) %>%
     ms_simplify(keep = 0.125, keep_shapes = TRUE)
 
-fc10_tc = colnames(fc10)[grep("^n_*.*(Stomach_female|Stomach_male|Lung_male)", colnames(fc10))]
-fc05_tc = colnames(fc05)[grep("^n_*.*(Stomach_female|Stomach_male|Lung_male)", colnames(fc05))]
-fc00_tc = colnames(fc00)[grep("^n_*.*(Stomach_female|Stomach_male|Lung_male)", colnames(fc00))]
+fc10 = fc10 %>%
+    mutate(across(matches("^n_*.*_(female)*.*"),
+              .fns = list(rcrude = ~1e5*./n_p_female_3),
+              .names = "{fn}_{col}")) %>%
+    mutate(across(matches("^n_*.*_(male)*.*"),
+              .fns = list(rcrude = ~1e5*./n_p_male_3),
+              .names = "{fn}_{col}"))
+fc05 = fc05 %>%
+    mutate(across(matches("^n_*.*_(female)*.*"),
+              .fns = list(rcrude = ~1e5*./n_p_female_2),
+              .names = "{fn}_{col}")) %>%
+    mutate(across(matches("^n_*.*_(male)*.*"),
+              .fns = list(rcrude = ~1e5*./n_p_male_2),
+              .names = "{fn}_{col}"))
+fc00 = fc00 %>%
+    mutate(across(matches("^n_*.*_(female)*.*"),
+              .fns = list(rcrude = ~1e5*./n_p_female_1),
+              .names = "{fn}_{col}")) %>%
+    mutate(across(matches("^n_*.*_(male)*.*"),
+              .fns = list(rcrude = ~1e5*./n_p_male_1),
+              .names = "{fn}_{col}"))
 
-fc10 = fc10 %>% dplyr::select(sgg_cd_c, all_of(fc10_tc))
-fc05 = fc05 %>% dplyr::select(sgg_cd_c, all_of(fc05_tc))
-fc00 = fc00 %>% dplyr::select(sgg_cd_c, all_of(fc00_tc))
+
+
+fc10_tc = colnames(fc10)[grep("^ragest_*.*(Stomach_female|Stomach_male|Lung_male)", colnames(fc10))]
+fc05_tc = colnames(fc05)[grep("^ragest_*.*(Stomach_female|Stomach_male|Lung_male)", colnames(fc05))]
+fc00_tc = colnames(fc00)[grep("^ragest_*.*(Stomach_female|Stomach_male|Lung_male)", colnames(fc00))]
+
+fc10_rc = colnames(fc10)[grep("^rcrude_*.*(Stomach_female|Stomach_male|Lung_male)", colnames(fc10))]
+fc05_rc = colnames(fc05)[grep("^rcrude_*.*(Stomach_female|Stomach_male|Lung_male)", colnames(fc05))]
+fc00_rc = colnames(fc00)[grep("^rcrude_*.*(Stomach_female|Stomach_male|Lung_male)", colnames(fc00))]
+
+fc10_asr = fc10 %>% dplyr::select(sgg_cd_c, all_of(fc10_tc))
+fc05_asr = fc05 %>% dplyr::select(sgg_cd_c, all_of(fc05_tc))
+fc00_asr = fc00 %>% dplyr::select(sgg_cd_c, all_of(fc00_tc))
+
+fc10_crr = fc10 %>% dplyr::select(sgg_cd_c, all_of(fc10_rc))
+fc05_crr = fc05 %>% dplyr::select(sgg_cd_c, all_of(fc05_rc))
+fc00_crr = fc00 %>% dplyr::select(sgg_cd_c, all_of(fc00_rc))
 
 brks_incmor = c(0, 50, 100, 250, 500, 1000, Inf)
 brks_pop = c(0, 1000, 5000, 20000, 35000, 100000, Inf)
@@ -148,19 +180,73 @@ map_pop = function(sdf, col, brks = brks_incmor) {
     sdf_selin = sdf %>% filter(grepl('^(11|23)', sgg_cd_c))
     sdf_buul = sdf %>% filter(grepl('^(21|26)', sgg_cd_c))
     
-    mapsf::mf_choro(sdf, var = col, breaks = brks, lwd = 0.1)
+    mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, lwd = 0.1)
     mf_title(col, pos = "left", tab = TRUE, cex = 1.2, line = 1, inner=FALSE) 
     mf_inset_on(x = sdf_selin, pos = "topright", cex = .28)
     # display the target municipality
     mf_init(sdf_selin)
-    mapsf::mf_choro(sdf, var = col, breaks = brks, leg_pos = NA, lwd = 0.1, add = TRUE)
+    mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, leg_pos = NA, lwd = 0.1, add = TRUE)
     mf_title("Seoul-Incheon", pos = "left", tab = TRUE, cex = .9, line = 1, inner = TRUE)
     # close the inset
     mf_inset_off()
     mf_inset_on(x = sdf_buul, pos = "bottomright", cex = .2)
     # display the target municipality
     mf_init(sdf_buul)
-    mapsf::mf_choro(sdf, var = col, breaks = brks, leg_pos=NA, lwd = 0.1, add = TRUE)
+    mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, leg_pos=NA, lwd = 0.1, add = TRUE)
+    mf_title("Busan-Ulsan", pos = "left", tab = TRUE, cex = .9, line = 1, inner = TRUE)
+    # close the inset
+    mf_inset_off()
+
+}
+
+map_pop_sel = function(sdf, col, brks = brks_incmor) {
+    targ_col = st_drop_geometry(sdf)[,col] %>% unlist
+    thres = quantile(targ_col, 0.8)
+    overwrite_col = ifelse(targ_col >= thres, targ_col, NA)
+    sdf = sdf %>%
+        mutate({{col}} := overwrite_col)
+    
+    sdf_selin = sdf %>% filter(grepl('^(11|23)', sgg_cd_c))
+    sdf_buul = sdf %>% filter(grepl('^(21|26)', sgg_cd_c))
+    
+    mapsf::mf_choro(sdf, var = col, breaks = 'jenks', nbreaks = 5, lwd = 0.1, col_na = 'grey')
+    mf_title(col, pos = "left", tab = TRUE, cex = 1.2, line = 1, inner=FALSE) 
+    mf_inset_on(x = sdf_selin, pos = "topright", cex = .28)
+    # display the target municipality
+    mf_init(sdf_selin)
+    mapsf::mf_choro(sdf, var = col, breaks = 'jenks', nbreaks = 5, leg_pos = NA, lwd = 0.1, add = TRUE, col_na = 'grey')
+    mf_title("Seoul-Incheon", pos = "left", tab = TRUE, cex = .9, line = 1, inner = TRUE)
+    # close the inset
+    mf_inset_off()
+    mf_inset_on(x = sdf_buul, pos = "bottomright", cex = .2)
+    # display the target municipality
+    mf_init(sdf_buul)
+    mapsf::mf_choro(sdf, var = col, breaks = 'jenks', nbreaks = 5, leg_pos=NA, lwd = 0.1, add = TRUE, col_na = 'grey')
+    mf_title("Busan-Ulsan", pos = "left", tab = TRUE, cex = .9, line = 1, inner = TRUE)
+    # close the inset
+    mf_inset_off()
+
+}
+
+
+
+map_pop_control = function(sdf, col, brks = brks_incmor) {
+    sdf_selin = sdf %>% filter(grepl('^(11|23)', sgg_cd_c))
+    sdf_buul = sdf %>% filter(grepl('^(21|26)', sgg_cd_c))
+    
+    mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, lwd = 0.1)
+    mf_title(col, pos = "left", tab = TRUE, cex = 1.2, line = 1, inner=FALSE) 
+    mf_inset_on(x = sdf_selin, pos = "topright", cex = .28)
+    # display the target municipality
+    mf_init(sdf_selin)
+    mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, leg_pos = NA, lwd = 0.1, add = TRUE)
+    mf_title("Seoul-Incheon", pos = "left", tab = TRUE, cex = .9, line = 1, inner = TRUE)
+    # close the inset
+    mf_inset_off()
+    mf_inset_on(x = sdf_buul, pos = "bottomright", cex = .2)
+    # display the target municipality
+    mf_init(sdf_buul)
+    mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, leg_pos=NA, lwd = 0.1, add = TRUE)
     mf_title("Busan-Ulsan", pos = "left", tab = TRUE, cex = .9, line = 1, inner = TRUE)
     # close the inset
     mf_inset_off()
@@ -171,22 +257,28 @@ map_pop = function(sdf, col, brks = brks_incmor) {
 
 # Period 1
 ```{r sgg plot (period 1), echo=F, fig.width=10, fig.height=6}
-for (i in colnames(fc00)[-grep('(sgg_cd_c|geom)', colnames(fc00))]) {
-    map_pop(fc00, i)
+for (i in colnames(fc00_asr)[-grep('(sgg_cd_c|geom)', colnames(fc00_asr))]) {
+    itrans = str_replace(i, "ragest_", "rcrude_n_")
+    map_pop_sel(fc00_asr, i)
+    map_pop_sel(fc00_crr, itrans)
 }
 ```
 
 # Period 2
 ```{r sgg plot (period 2), echo=F, fig.width=10, fig.height=6}
-for (i in colnames(fc05)[-grep('(sgg_cd_c|geom)', colnames(fc05))]) {
-    map_pop(fc05, i)
+for (i in colnames(fc05_asr)[-grep('(sgg_cd_c|geom)', colnames(fc05_asr))]) {
+    itrans = str_replace(i, "ragest_", "rcrude_n_")
+    map_pop_sel(fc05_asr, i)
+    map_pop_sel(fc05_crr, itrans)
 }
 ```
 
 # Period 3
 ```{r sgg plot (period 3), echo=F, fig.width=10, fig.height=6}
-for (i in colnames(fc10)[-grep('(sgg_cd_c|geom)', colnames(fc10))]) {
-    map_pop(fc10, i)
+for (i in colnames(fc10_asr)[-grep('(sgg_cd_c|geom)', colnames(fc10_asr))]) {
+    itrans = str_replace(i, "ragest_", "rcrude_n_")
+    map_pop_sel(fc10_asr, i)
+    map_pop_sel(fc10_crr, itrans)
 }
 ```
 

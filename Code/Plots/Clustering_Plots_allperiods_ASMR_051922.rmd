@@ -43,6 +43,10 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
     - Weighted normal model using the number of cases
     - Gini-optimization is not available for weighted normal models
 
+- 06/22/2022
+    - Fixed the case and population parameter settings in SaTScan software
+    - Comparing weighted normal and Poisson models 
+
 ```{r}
 source('../Base/base_functions.R')
 options(repos = 'https://cran.seoul.go.kr')
@@ -77,7 +81,7 @@ covar_origin_00_fc = covar_origin_00_fc %>%
     filter(!sgg_cd_c %in% c(23320, 37430, 39010, 39020)) %>%
     ms_simplify(keep = 0.125, keep_shapes = TRUE)
 
-clear_input = function(filepath, alpha = 0.01, locmin = 2) {
+clear_input = function(filepath, alpha = 0.05, locmin = 2) {
     # alpha: significance level
     # locmin: how many points should be included at least?
     res = read_rds(filepath)
@@ -90,6 +94,20 @@ clear_input = function(filepath, alpha = 0.01, locmin = 2) {
     return(resl)
 }
 
+clear_satscan_df = function(filepath, alpha = 0.05, locmin = 2) {
+    # alpha: significance level
+    # locmin: how many points should be included at least?
+    res = read_rds(filepath)
+    labels = as.data.frame(str_split_fixed(res$analysis_title, "_", 6))
+    colnames(labels) = c("cancertype", "period", "measure", "target", "sex", "vset")
+    res = res %>%
+          bind_cols(labels, .) %>%
+          filter(number_locs >= locmin)
+    return(res)
+}
+
+
+
 p_v0_resl = clear_input(filepath = str_c(rdsdir, "satscan_ASMR_uncontrolled_resid.rds"))
 p_v1_resl = clear_input(filepath = str_c(rdsdir, "satscan_ASMR_vset1_resid.rds"))
 p_v2_resl = clear_input(filepath = str_c(rdsdir, "satscan_ASMR_vset2_resid.rds"))
@@ -98,6 +116,84 @@ p_v4_resl = clear_input(filepath = str_c(rdsdir, "satscan_ASMR_vset4_resid.rds")
 
 
 ```
+
+```{r include=FALSE}
+p_v0_resdf = clear_satscan_df(filepath = str_c(rdsdir, "satscan_ASMR_uncontrolled_resid.rds"))
+p_v1_resdf = clear_satscan_df(filepath = str_c(rdsdir, "satscan_ASMR_vset1_resid.rds"))
+p_v2_resdf = clear_satscan_df(filepath = str_c(rdsdir, "satscan_ASMR_vset2_resid.rds"))
+p_v3_resdf = clear_satscan_df(filepath = str_c(rdsdir, "satscan_ASMR_vset3_resid.rds"))
+p_v4_resdf = clear_satscan_df(filepath = str_c(rdsdir, "satscan_ASMR_vset4_resid.rds"))
+
+
+```
+```{r include=FALSE}
+make_shortdf = function(sfd) {
+    sfd_d =
+        sfd %>%
+        dplyr::select(sgg_cd_c, matches('^ragest*.*Lung_male.*|^ragest*.*_Stomach_(male|female).*')) %>%
+        st_drop_geometry %>%
+        pivot_longer(cols = 2:ncol(.))
+    labelsc = as.data.frame(str_split_fixed(sfd_d$name, "_", 5))
+    colnames(labelsc) = c("measure", "target", "cancertype", "sex", "period")
+    sfd_d = bind_cols(sfd_d, labelsc)
+    return(sfd_d)
+}
+
+make_shortdf2 = function(sfd) {
+    sfd_d =
+        sfd %>%
+        dplyr::select(sgg_cd_c, matches('^n*.*Lung_male.*|^n*.*_Stomach_(male|female).*')) %>%
+        st_drop_geometry %>%
+        pivot_longer(cols = 2:ncol(.))
+    labelsc = as.data.frame(str_split_fixed(sfd_d$name, "_", 5))
+    colnames(labelsc) = c("measure", "target", "cancertype", "sex", "period")
+    sfd_d = bind_cols(sfd_d, labelsc)
+    return(sfd_d)
+}
+
+c10 = make_shortdf(covar_origin_10_fc)
+c05 = make_shortdf(covar_origin_05_fc)
+c00 = make_shortdf(covar_origin_00_fc)
+
+c10_gg = c10 %>%
+    ggplot(data = ., mapping = aes(x = value)) +
+    theme_bw() +
+    geom_histogram(bins = 50) +
+    facet_wrap(target * cancertype ~ sex) 
+c05_gg = c05 %>%
+    ggplot(data = ., mapping = aes(x = value)) +
+    theme_bw() +
+    geom_histogram(bins = 50) +
+    facet_wrap(target * cancertype ~ sex) 
+c00_gg = c00 %>%
+    ggplot(data = ., mapping = aes(x = value)) +
+    theme_bw() +
+    geom_histogram(bins = 50) +
+    facet_wrap(target * cancertype ~ sex) 
+
+c10n = make_shortdf2(covar_origin_10_fc)
+c05n = make_shortdf2(covar_origin_05_fc)
+c00n = make_shortdf2(covar_origin_00_fc)
+
+c10n_gg = c10n %>%
+    ggplot(data = ., mapping = aes(x = value)) +
+    theme_bw() +
+    geom_histogram(bins = 50) +
+    facet_wrap(target * cancertype ~ sex) 
+c05n_gg = c05n %>%
+    ggplot(data = ., mapping = aes(x = value)) +
+    theme_bw() +
+    geom_histogram(bins = 50) +
+    facet_wrap(target * cancertype ~ sex) 
+c00n_gg = c00n %>%
+    ggplot(data = ., mapping = aes(x = value)) +
+    theme_bw() +
+    geom_histogram(bins = 50) +
+    facet_wrap(target * cancertype ~ sex) 
+
+
+```
+
 
 # Overview
 - Incidence and mortality rates: (Sum of cases) / (Sum of the population)

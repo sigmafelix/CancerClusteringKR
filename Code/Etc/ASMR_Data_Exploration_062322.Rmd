@@ -107,7 +107,7 @@ age_pop_clean_agg = age_pop_clean %>%
     mutate(sex = plyr::mapvalues(sex, unique(sex), c('Male', 'Female')))
 
 
-load(str_c(drive, '/Manuscript/Clustering_Base_sf_042022.RData'))
+load(str_c(drive, '/Manuscript/Clustering_Base_sf_062422.RData'))
 
 # sgg_poly = covar_origin_10_fc %>%
 #     filter(!sgg_cd_c %in% c(23320, 37430) & !grepl('^(39)', sgg_cd_c)) %>%
@@ -134,27 +134,27 @@ fc00 = covar_origin_00_fc %>%
     filter(!sgg_cd_c %in% c(23320, 37430) & !grepl('^(39)', sgg_cd_c)) %>%
     ms_simplify(keep = 0.125, keep_shapes = TRUE)
 
-fc10 = fc10 %>%
-    mutate(across(matches("^n_*.*_(female)*.*"),
-              .fns = list(rcrude = ~1e5*./n_p_female_3),
-              .names = "{fn}_{col}")) %>%
-    mutate(across(matches("^n_*.*_(male)*.*"),
-              .fns = list(rcrude = ~1e5*./n_p_male_3),
-              .names = "{fn}_{col}"))
-fc05 = fc05 %>%
-    mutate(across(matches("^n_*.*_(female)*.*"),
-              .fns = list(rcrude = ~1e5*./n_p_female_2),
-              .names = "{fn}_{col}")) %>%
-    mutate(across(matches("^n_*.*_(male)*.*"),
-              .fns = list(rcrude = ~1e5*./n_p_male_2),
-              .names = "{fn}_{col}"))
-fc00 = fc00 %>%
-    mutate(across(matches("^n_*.*_(female)*.*"),
-              .fns = list(rcrude = ~1e5*./n_p_female_1),
-              .names = "{fn}_{col}")) %>%
-    mutate(across(matches("^n_*.*_(male)*.*"),
-              .fns = list(rcrude = ~1e5*./n_p_male_1),
-              .names = "{fn}_{col}"))
+# fc10 = fc10 %>%
+#     mutate(across(matches("^n_*.*_(female)*.*"),
+#               .fns = list(rcrude = ~1e5*./n_p_female_3),
+#               .names = "{fn}_{col}")) %>%
+#     mutate(across(matches("^n_*.*_(male)*.*"),
+#               .fns = list(rcrude = ~1e5*./n_p_male_3),
+#               .names = "{fn}_{col}"))
+# fc05 = fc05 %>%
+#     mutate(across(matches("^n_*.*_(female)*.*"),
+#               .fns = list(rcrude = ~1e5*./n_p_female_2),
+#               .names = "{fn}_{col}")) %>%
+#     mutate(across(matches("^n_*.*_(male)*.*"),
+#               .fns = list(rcrude = ~1e5*./n_p_male_2),
+#               .names = "{fn}_{col}"))
+# fc00 = fc00 %>%
+#     mutate(across(matches("^n_*.*_(female)*.*"),
+#               .fns = list(rcrude = ~1e5*./n_p_female_1),
+#               .names = "{fn}_{col}")) %>%
+#     mutate(across(matches("^n_*.*_(male)*.*"),
+#               .fns = list(rcrude = ~1e5*./n_p_male_1),
+#               .names = "{fn}_{col}"))
 
 
 
@@ -204,7 +204,7 @@ map_pop_sel = function(sdf, col, brks = brks_incmor) {
     thres = quantile(targ_col, 0.8)
     overwrite_col = ifelse(targ_col >= thres, targ_col, NA)
     sdf = sdf %>%
-        mutate({{col}} := overwrite_col)
+       mutate({{col}} := overwrite_col)
     
     sdf_selin = sdf %>% filter(grepl('^(11|23)', sgg_cd_c))
     sdf_buul = sdf %>% filter(grepl('^(21|26)', sgg_cd_c))
@@ -258,7 +258,7 @@ map_pop_control = function(sdf, col, brks = brks_incmor) {
 # Period 1
 ```{r sgg plot (period 1), echo=F, fig.width=10, fig.height=6}
 for (i in colnames(fc00_asr)[-grep('(sgg_cd_c|geom)', colnames(fc00_asr))]) {
-    itrans = str_replace(i, "ragest_", "rcrude_n_")
+    itrans = str_replace(i, "ragest_", "rcrude_")
     map_pop_sel(fc00_asr, i)
     map_pop_sel(fc00_crr, itrans)
 }
@@ -267,7 +267,7 @@ for (i in colnames(fc00_asr)[-grep('(sgg_cd_c|geom)', colnames(fc00_asr))]) {
 # Period 2
 ```{r sgg plot (period 2), echo=F, fig.width=10, fig.height=6}
 for (i in colnames(fc05_asr)[-grep('(sgg_cd_c|geom)', colnames(fc05_asr))]) {
-    itrans = str_replace(i, "ragest_", "rcrude_n_")
+    itrans = str_replace(i, "ragest_", "rcrude_")
     map_pop_sel(fc05_asr, i)
     map_pop_sel(fc05_crr, itrans)
 }
@@ -276,7 +276,7 @@ for (i in colnames(fc05_asr)[-grep('(sgg_cd_c|geom)', colnames(fc05_asr))]) {
 # Period 3
 ```{r sgg plot (period 3), echo=F, fig.width=10, fig.height=6}
 for (i in colnames(fc10_asr)[-grep('(sgg_cd_c|geom)', colnames(fc10_asr))]) {
-    itrans = str_replace(i, "ragest_", "rcrude_n_")
+    itrans = str_replace(i, "ragest_", "rcrude_")
     map_pop_sel(fc10_asr, i)
     map_pop_sel(fc10_crr, itrans)
 }

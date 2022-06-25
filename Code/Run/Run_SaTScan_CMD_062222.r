@@ -1,12 +1,13 @@
 ### SaTScan standalone batch
 ### June 22, 2022
+### Last revised June 24, 2022
 ### Insang Song (sigmafelix@hotmail.com)
 
 
 library(pacman)
 p_load(stringr, readr, sf, dplyr)
 source("./Code/Base/base_functions.R")
-load("/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/Manuscript/Clustering_Base_sf_042022.RData")
+load("/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/Manuscript/Clustering_Base_sf_062422.RData")
 
 covar_origin_00_fcd = covar_origin_00_fc %>% bind_cols(as.data.frame(st_coordinates(st_centroid(.)))) %>%
     filter(!grepl('^(23320|37430|39)', sgg_cd_c)) %>%
@@ -53,17 +54,17 @@ indx_p1 = 1:8 # 16
 indx_p2 = 17:24 # 32
 indx_p3 = 33:40 # 48
 
-p1_all = mapply(function(x, y) {
-    generate_satscan_prm(data = dat1,
-                    title.analysis = y,
-                    dir.base = dbase, dir.target = "/home/felix/workcache/", name.idcol = geoid,
-                    filename.input = "satscan_base_data_period1.csv",
-                    filename.output = str_c(y, ".txt"),
-                    col.var = x,
-                    col.case = str_c('n', x),
-                    prm.path = "/home/felix/Documents/test.prm"
-                    )
-}, all_models$basename[10], all_models$modeltitle[10], SIMPLIFY = FALSE)
+# p1_all = mapply(function(x, y) {
+#     generate_satscan_prm(data = dat1,
+#                     title.analysis = y,
+#                     dir.base = dbase, dir.target = "/home/felix/workcache/", name.idcol = geoid,
+#                     filename.input = "satscan_base_data_period1.csv",
+#                     filename.output = str_c(y, ".txt"),
+#                     col.var = x,
+#                     col.case = str_c('n', x),
+#                     prm.path = "/home/felix/Documents/test.prm"
+#                     )
+# }, all_models$basename[10], all_models$modeltitle[10], SIMPLIFY = FALSE)
 
 
 # run for the period 1 (normal) ####
@@ -74,6 +75,7 @@ p1_all = mapply(function(x, y) {
                     filename.input = "satscan_base_data_period1.csv",
                     filename.output = str_c(y, ".txt"),
                     col.var = x,
+                    weighted = T,
                     col.case = str_c('n', x),
                     prm.path = "/home/felix/Documents/test.prm"
                     )

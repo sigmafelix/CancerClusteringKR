@@ -578,6 +578,28 @@ regress_rates = function(data,
     return(reg_norm)
 }
 
+
+
+#' Run SaTScan batch in Unix-like systems
+#'
+#' @param data data.frame with all required information for spatial scan analysis. It includes covariates, population, coordinates, etc.
+#' @param title.analysis Analysis title. Should include _n_ or _ragest_ or _rcrude_
+#' @param dir.base The directory from which the `data` was read 
+#' @param dir.target The directory to save and process the interim data from SaTScan software. Recommended to set a temp directory
+#' @param name.idcol The name of spatial ID column
+#' @param filename.input The file name of `data`
+#' @param filename.output The file name of output information from SaTScan (* it will be saved in `dir.target` and eventually removed when the SaTScan run is completed)
+#' @param col.var Continuous variable for (weighted) normal models
+#' @param col.case Discrete or continuous variable for weighted normal or Poisson models
+#' @param coord.x The column name of the X coordinates
+#' @param coord.y The column name of the Y coordinates
+#' @param prm.path The path in which the SaTScan configuration file will be saved
+#' @param weighted Boolean. Weighted normal model indicator.
+#' @param adjust Boolean. Covariate adjustment indicator.
+#' @param string_search String. The regex pattern search statement (soon to be deprecated).
+#' @param add_var String. The name of additional variable to be included in the covariates
+#' @param vset String. The name of variable set to be controlled. Can have one of vset1, vset2, vset3, and vset4. Default is `NULL`
+#' @return A list of tibble objects with detected cluster information
 generate_satscan_prm = function(data,
                     title.analysis,
                     dir.base,
@@ -605,12 +627,14 @@ generate_satscan_prm = function(data,
     fullpath.input = str_c(dir.base, filename.input)
     fullpath.output = str_c(dir.target, filename.output)
     indx.idcol = grep(name.idcol, dcols)
+    # if covariates were controlled, the case will be set as the one-only column (named case_normal)
     indx.case = ifelse(iscount, grep(col.var, dcols), 
-        ifelse(weighted, grep(str_replace(col.var, "ragest_", "n_"), dcols),
+        ifelse(!weighted | (weighted & is.null(vset)), grep(str_replace(col.var, "ragest_", "n_"), dcols),
                 grep('case_normal', dcols)))
-    # Soon to be deprecated: indx.weight and col.weight
-    indx.weight = ifelse(iscount | weighted, '', 
-                        str_c(",", grep(str_replace(col.var, "ragest_", "n_"), dcols)))
+    indx.weight = ifelse(iscount, '',
+                    ifelse(!weighted, '', 
+                        ifelse(!is.null(vset), '',
+                        str_c(",", grep(str_replace(col.var, "ragest_", "n_"), dcols)))))
     indx.var = ifelse(iscount, '', str_c(",,", grep(col.var, dcols)))
     indx.xcoord = grep(str_c("^", coord.x, "$"), dcols)
     indx.ycoord = grep(str_c("^", coord.y, "$"), dcols)
@@ -742,9 +766,9 @@ AnalysisType=1
 ;model type (0=Discrete Poisson, 1=Bernoulli, 2=Space-Time Permutation, 3=Ordinal, 4=Exponential, 5=Normal, 6=Continuous Poisson, 7=Multinomial, 8=Rank, 9=UniformTime)
 ModelType={modeltype}
 ;scan areas (1=High Rates(Poison,Bernoulli,STP); High Values(Ordinal,Normal); Short Survival(Exponential); Higher Trend(Poisson-SVTT), 2=Low Rates(Poison,Bernoulli,STP); Low Values(Ordinal,Normal); Long Survival(Exponential); Lower Trend(Poisson-SVTT), 3=Both Areas)
-ScanAreas=3
+ScanAreas=1
 ;time aggregation units (0=None, 1=Year, 2=Month, 3=Day, 4=Generic)
-TimeAggregationUnits=1
+TimeAggregationUnits=0
 ;time aggregation length (Positive Integer)
 TimeAggregationLength=1
 
@@ -812,11 +836,11 @@ MultipleCoordinatesType=0
 
 [Spatial Window]
 ;maximum spatial size in population at risk (<=50%)
-MaxSpatialSizeInPopulationAtRisk=50
+MaxSpatialSizeInPopulationAtRisk=35
 ;restrict maximum spatial size - max circle file? (y/n)
 UseMaxCirclePopulationFileOption=n
 ;maximum spatial size in max circle population file (<=50%)
-MaxSpatialSizeInMaxCirclePopulationFile=50
+MaxSpatialSizeInMaxCirclePopulationFile=35
 ;maximum circle size filename
 MaxCirclePopulationFile=
 ;restrict maximum spatial size - distance? (y/n)
@@ -880,7 +904,7 @@ AdjustmentsByKnownRelativeRisksFilename=
 
 [Inference]
 ;p-value reporting type (Default p-value=0, Standard Monte Carlo=1, Early Termination=2, Gumbel p-value=3) 
-PValueReportType=3
+PValueReportType=0
 ;early termination threshold
 EarlyTerminationThreshold=50
 ;report Gumbel p-values (y/n)
@@ -965,19 +989,19 @@ ThresholdLocationsSeparateKML=1000
 ;report hierarchical clusters (y/n)
 ReportHierarchicalClusters=y
 ;criteria for reporting secondary clusters(0=NoGeoOverlap, 1=NoCentersInOther, 2=NoCentersInMostLikely,  3=NoCentersInLessLikely, 4=NoPairsCentersEachOther, 5=NoRestrictions)
-CriteriaForReportingSecondaryClusters=2
+CriteriaForReportingSecondaryClusters=1
 ;report gini clusters (y/n)
 ReportGiniClusters=n
 ;gini index cluster reporting type (0=optimal index only, 1=all values)
 GiniIndexClusterReportingType=0
 ;spatial window maxima stops (comma separated decimal values[<=50%] )
-SpatialMaxima=5,10,12,15,20,25,30,33,35,40,45,50
+SpatialMaxima=5,10,12,15,20,25,30,33,35
 ;max p-value for clusters used in calculation of index based coefficients (0.000-1.000)
 GiniIndexClustersPValueCutOff=0.05
 ;report gini index coefficents to results file (y/n)
 ReportGiniIndexCoefficents=y
 ;restrict reported clusters to maximum geographical cluster size? (y/n)
-UseReportOnlySmallerClusters=n
+UseReportOnlySmallerClusters=y
 ;maximum reported spatial size in population at risk (<=50%)
 MaxSpatialSizeInPopulationAtRisk_Reported=35
 ;restrict maximum reported spatial size - max circle file? (y/n)
@@ -1208,11 +1232,16 @@ tmap_satscan = function(basemap, sats, threshold = 2, significance = 0.01, alpha
     library(tmap)
     basemap$cluster = NA
 
-    if (nrow(sats) == 0 | (gini & sum(sats$GINI) == 0)) {
+    if (is.null(sats)) {
+        tm_cluster = tm_shape(basemap) +
+            tm_borders(col = 'dark grey', lwd = 0.8)
+        return(tm_cluster)
+    } else if (gini & sum(sats$GINI) == 0) {
         tm_cluster = tm_shape(basemap) +
             tm_borders(col = 'dark grey', lwd = 0.8)
         return(tm_cluster)
     }
+
     if (gini) {
         sats = sats %>% filter(GINI)
     }

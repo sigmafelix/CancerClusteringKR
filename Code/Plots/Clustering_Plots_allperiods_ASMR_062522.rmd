@@ -1,7 +1,7 @@
 ---
 title: "Stomach and lung cancer incidence/mortality clustering results (weighted normal)"
 author: "Insang Song"
-date: 06-24-2022
+date: 06-25-2022
 theme: "spacelab"
 output:
   html_document:
@@ -49,6 +49,11 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 - 06/24/2022
     - Fixed data aggregation errors
     - Redo analysis
+
+- 06/25/2022
+    - For covariate controlled models, the weighted normal model will not be applied
+    - The maximum cluster size (no matter it is subject to "reported" or "generally analyzed" configuration) does not work in weighted normal models; The maximum percentage of spatial units is now set 35% 
+    - `alpha` reset to 0.05
 
 ```{r}
 source('../Base/base_functions.R')

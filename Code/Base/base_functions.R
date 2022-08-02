@@ -629,7 +629,7 @@ generate_satscan_prm = function(data,
     indx.idcol = grep(name.idcol, dcols)
     # if covariates were controlled, the case will be set as the one-only column (named case_normal)
     indx.case = ifelse(iscount, grep(col.var, dcols), 
-        ifelse(!weighted | (weighted & is.null(vset)), grep(str_replace(col.var, "ragest_", "n_"), dcols),
+        ifelse((!weighted & !is.null(vset)) | (weighted & is.null(vset)), grep(str_replace(col.var, "ragest_", "n_"), dcols),
                 grep('case_normal', dcols)))
     indx.weight = ifelse(iscount, '',
                     ifelse(!weighted, '', 
@@ -648,10 +648,12 @@ generate_satscan_prm = function(data,
     #file.copy(fullpath.input, str_c("/home/felix/Documents/", filename.input), overwrite = TRUE)
     #file.copy(fullpath.input, )
     if (iscount) {
+        int.period = str_extract(title.analysis, "\\d")
         indx.pop = grep(str_c("n_p", str_extract(title.analysis, "_(female|male|total)")), dcols)
         line.popdef = str_c("PopulationFile=", fullpath.temp)
         line.pop = "PopulationFile-SourceType=0"
-        line.popmap = str_c("PopulationFile-SourceFieldMap=", indx.idcol, ",", indx.year, ",", indx.pop)
+        line.popmap = str_c("PopulationFile-SourceFieldMap=", indx.idcol, ",unspecifiedPopDate,", indx.pop)
+        print(line.popdef)
     } else {
         line.popdef = "PopulationFile="
         line.pop = "PopulationFile-SourceType="
@@ -694,7 +696,7 @@ generate_satscan_prm = function(data,
         dcols.new = colnames(newdata)
         if (iscount) {
             indx.pop = grep(col.est, dcols.new)
-            line.popmap = str_c("PopulationFile-SourceFieldMap=", indx.idcol, ",", indx.year, ",", indx.pop)
+            line.popmap = str_c("PopulationFile-SourceFieldMap=", indx.idcol, ",unspecifiedPopDate,", indx.pop)
         }
     }
     
@@ -735,10 +737,16 @@ EndDate=2000/12/31
 {line.popdef}
 ;population source type
 {line.pop}
-;csv source first row column header
-PopulationFile-SourceFirstRowHeader=y
 ;population source fieldmap (comma separated list)
 {line.popmap}
+;csv source delimiter (leave empty for space or tab delimiter)
+PopulationFile-SourceDelimiter=,
+;csv source group character
+PopulationFile-SourceGrouper="
+;csv source skip initial lines (i.e. meta data)
+PopulationFile-SourceSkip=0
+;csv source first row column header
+PopulationFile-SourceFirstRowHeader=y
 ;coordinate data filename
 CoordinatesFile={fullpath.temp}
 ;source type (CSV=0, DBASE=1, SHAPE=2)
@@ -999,7 +1007,7 @@ SpatialMaxima=5,10,12,15,20,25,30,33,35
 ;max p-value for clusters used in calculation of index based coefficients (0.000-1.000)
 GiniIndexClustersPValueCutOff=0.05
 ;report gini index coefficents to results file (y/n)
-ReportGiniIndexCoefficents=y
+ReportGiniIndexCoefficents=n
 ;restrict reported clusters to maximum geographical cluster size? (y/n)
 UseReportOnlySmallerClusters=y
 ;maximum reported spatial size in population at risk (<=50%)
@@ -1024,6 +1032,16 @@ TemporalGraphMostMLC=1
 TemporalGraphSignificanceCutoff=0.05
 
 [Other Output]
+;cluster significance by recurrence interval  (y/n)
+ClusterSignificanceByRecurrence=n
+;cluster significance recurrence interval cutoff (positive integer)
+ClusterSignificanceRecurrenceCutoff=100
+;cluster significance recurrence interval type (YEAR=1, DAY=3)
+ClusterSignificanceRecurrenceCutoffType=4
+;cluster significance by  p-value (y/n)
+ClusterSignificanceByPvalue=n
+;cluster significance p-value cutoff (0.000-1.000)
+ClusterSignificancePvalueCutoff=0.05
 ;report critical values for .01 and .05? (y/n)
 CriticalValue=n
 ;report cluster rank (y/n)
@@ -1032,6 +1050,24 @@ ReportClusterRank=n
 PrintAsciiColumnHeaders=y
 ;user-defined title for results file
 ResultsTitle={analysis.title2}
+
+[Email Alerts]
+;whether to email user an analysis results summary
+EmailResultsSummary=n
+;list of users which are always emailed
+EmailAlwaysRecipients=
+;list of users which are emailed for significant events
+EmailSignificantRecipients=
+;subject line of email - no significant clusters
+EmailSubjectLineNoSignificant=
+;email message body - no significant clusters
+EmailMessageBodyNoSignificant=
+;subject line of email - significant clusters
+EmailSubjectLineSignificant=
+;email message body - significant clusters
+EmailMessageBodySignificant=
+;email message - attach results
+EmailAttachResults=n
 
 [Elliptic Scan]
 ;elliptic shapes - one value for each ellipse (comma separated decimal values)
@@ -1061,7 +1097,7 @@ ExecutionType=0
 
 [System]
 ;system setting - do not modify
-Version=10.0.2\\n',
+Version=10.1.0\\n',
     fullpath.temp = fullpath.temp,
     indx.idcol = indx.idcol,
     indx.case = indx.case,
@@ -1077,7 +1113,7 @@ Version=10.0.2\\n',
     indx.ycoord = indx.ycoord,
     analysis.title2 = str_c(title.analysis, "out.txt")
     )
-    print(xml_analysis_block)
+    #print(xml_analysis_block)
     sink(file = prm.path)
     cat(xml_analysis_block)
     sink()
@@ -1092,7 +1128,7 @@ Version=10.0.2\\n',
     if (modeltype == 0) {
         dist.info = "Poisson"
         cn = c('cluster', 'locid', 'x', 'y', 'minor', 'major', 'angle', 'shape',
-               'start_date', 'end_date', 'number_locs', 'LLR', 'pvalue', 'obs', 'ex', 'obsoverex', 'RR', 'pop')
+               'start_date', 'end_date', 'number_locs', 'LLR', 'stat_test', 'pvalue', 'obs', 'ex', 'obsoverex', 'RR', 'pop', 'GINI')
     } else if (modeltype == 5) {
         dist.info = "Weighted normal"
         cn = c('cluster', 'locid', 'x', 'y', 'minor', 'major', 'angle', 'shape',

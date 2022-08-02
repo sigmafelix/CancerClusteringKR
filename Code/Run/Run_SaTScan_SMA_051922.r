@@ -1,7 +1,13 @@
+## Run_SaTScan::: 080122
+
 library(pacman)
 p_load(stringr, readr, sf, dplyr)
-source("base_functions.R")
-load("/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/Manuscript/Clustering_Base_sf_042022.RData")
+source("./Base/base_functions.R")
+
+cldir = "/home/felix/"
+"%s%" = function(x, y) str_c(x, y)
+
+load(cldir %s% "OneDrive/NCC_Project/CancerClustering/Manuscript/Clustering_Base_sf_042022.RData")
 
 covar_origin_00_fc = covar_origin_00_fc %>% bind_cols(as.data.frame(st_coordinates(st_centroid(., of_largest_polygon = TRUE))))
 covar_origin_05_fc = covar_origin_05_fc %>% bind_cols(as.data.frame(st_coordinates(st_centroid(., of_largest_polygon = TRUE))))
@@ -20,22 +26,22 @@ covar_origin_10_fcd = covar_origin_10_fc %>%
     st_drop_geometry %>%
     dplyr::filter(grepl('^(11|23|31)', sgg_cd_c) & sgg_cd_c != 23320)
 
-write_csv(covar_origin_00_fcd, "/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/satscan_base_SMA_data_period1.csv")
-write_csv(covar_origin_05_fcd, "/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/satscan_base_SMA_data_period2.csv")
-write_csv(covar_origin_10_fcd, "/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/satscan_base_SMA_data_period3.csv")
+# write_csv(covar_origin_00_fcd, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_base_SMA_data_period1.csv")
+# write_csv(covar_origin_05_fcd, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_base_SMA_data_period2.csv")
+# write_csv(covar_origin_10_fcd, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_base_SMA_data_period3.csv")
 
 
-dat1 = read_csv("/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/satscan_base_SMA_data_period1.csv")
-dat2 = read_csv("/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/satscan_base_SMA_data_period2.csv")
-dat3 = read_csv("/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/satscan_base_SMA_data_period3.csv")
+dat1 = read_csv(cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_base_SMA_data_period1.csv")
+dat2 = read_csv(cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_base_SMA_data_period2.csv")
+dat3 = read_csv(cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_base_SMA_data_period3.csv")
 
 # file.copy("/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/satscan_base_SMA_data_period1.csv", "/home/felix/Documents/satscan_base_SMA_data_period1.csv", overwrite = TRUE)
 # file.copy("/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/satscan_base_SMA_data_period2.csv", "/home/felix/Documents/satscan_base_SMA_data_period2.csv", overwrite = TRUE)
 # file.copy("/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/satscan_base_SMA_data_period3.csv", "/home/felix/Documents/satscan_base_SMA_data_period3.csv", overwrite = TRUE)
 
 
-dbase = "/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/"
-dtarg = "/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/SaTScan_Results/"
+dbase = cldir %s% "OneDrive/NCC_Project/CancerClustering/"
+dtarg = cldir %s% "OneDrive/NCC_Project/CancerClustering/SaTScan_Results/"
 geoid = "sgg_cd_c"
 
 all_models = expand.grid(

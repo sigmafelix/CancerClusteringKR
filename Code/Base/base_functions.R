@@ -629,7 +629,7 @@ generate_satscan_prm = function(data,
     indx.idcol = grep(name.idcol, dcols)
     # if covariates were controlled, the case will be set as the one-only column (named case_normal)
     indx.case = ifelse(iscount, grep(col.var, dcols), 
-        ifelse((!weighted & !is.null(vset)) | (weighted & is.null(vset)), grep(str_replace(col.var, "ragest_", "n_"), dcols),
+        ifelse(!weighted, grep(str_replace(col.var, "ragest_", "n_"), dcols),
                 grep('case_normal', dcols)))
     indx.weight = ifelse(iscount, '',
                     ifelse(!weighted, '', 

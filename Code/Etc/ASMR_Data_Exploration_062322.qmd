@@ -1,0 +1,374 @@
+---
+author: "Insang Song"
+date: 08-02-2022
+theme: "spacelab"
+format:
+  docx:
+    toc: true
+---
+
+```{r }
+#    self-contained: true
+#    fig_caption: true
+
+## Population data exploration
+## Objective
+## - Incidence and mortality: for the entire country, you should have the total counts
+## - Using 5-year age groups, identify low count group then
+## - Plot district-level maps for low count groups
+
+```
+```{r setup, include=F, echo=F}
+# rmarkdown::render("/home/felix/GitHub/CancerClusteringKR/Code/Etc/Population_Data_Exploration_052622.r")
+source('../Base/base_functions.R')
+options(repos = 'https://cran.seoul.go.kr')
+if (!require(pacman)) { install.packages('pacman') } 
+
+p_load(tidyverse, sf, tmap, readxl, kableExtra, patchwork, rmapshaper, spdep, mapsf, rmarkdown)
+
+username = 'sigma'
+basedir = sprintf('/mnt/c/Users/%s/', username)
+#rdatafiles = list.files(path = str_c(basedir, 'Documents/GP/'), pattern = '*.RData', full.names = TRUE)
+geopath = str_c(basedir, "OneDrive/Data/Korea/")
+drive = str_c(basedir, "OneDrive/NCC_Project/CancerClustering/")
+geopath = str_c(basedir, "OneDrive/Data/Korea/")
+dbdir = drive  
+rdsdir = sprintf("/mnt/c/Users/%s/OneDrive/NCC_Project/CancerClustering/", username)
+
+exceldir = str_c(drive, "Data/Cancer/")
+
+## Part 1: histogram for period by age and sex
+age_inc = readxl::read_excel(str_c(exceldir, "Incidence_Periods_Summary.xlsx"), sheet = 1) %>%
+    filter(Sex != "All") %>%
+    pivot_longer(cols = 4:6)
+    
+age_mor = readxl::read_excel(str_c(exceldir, "Mortality_Periods_Summary.xlsx"), sheet = 1) %>%
+    dplyr::select(1:3, starts_with("Period")) %>%
+    filter(Sex != 'All') %>%
+    pivot_longer(cols = 4:6)
+
+# plot
+age_inc_gg = 
+    ggplot(data = age_inc,
+           mapping = aes(x = Age, y = value, fill = Sex, group = Sex)) +
+    geom_col(position = 'dodge') +
+    facet_grid(name~Cancer) +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 16),
+          axis.text.x = element_text(hjust = 1, angle = 90),
+          strip.text = element_text(size = 15),
+          legend.position = 'top') +
+    coord_flip() +
+    labs(title = "Incidence by age and sex",
+         caption = "Periods 1-3 are 1999-2003, 2004-2008, and 2009-2013, respectively")
+age_mor_gg = 
+    ggplot(data = age_mor,
+           mapping = aes(x = Age, y = value, fill = Sex, group = Sex)) +
+    geom_col(position = 'dodge') +
+    facet_grid(name~Cancer) +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 16),
+          axis.text.x = element_text(hjust = 1, angle = 90),
+          strip.text = element_text(size = 15),
+          legend.position = 'top') +
+    coord_flip() +
+    labs(title = "Mortality by age and sex",
+         caption = "Periods 1-3 are 1999-2003, 2004-2008, and 2009-2013, respectively")
+
+```
+```{r basic plot, include=F, echo=F, fig.width=7, fig.height=9}
+age_inc_gg
+age_mor_gg
+
+
+
+
+```
+```{r sgg cleaning, echo=F, fig.width=7, fig.height=9}
+age_pop = readxl::read_excel(str_c(drive, "Data/Population/MidPopulation_1999_2013_age.xlsx"))
+colnames(age_pop) = c('sggcd', 'sggnm', 'sexcd', 'sex', 'agecd', 'age', 'year', 'population')
+age_pop_clean = age_pop %>%
+    mutate(year = as.numeric(substr(year, 1, 4)),
+           period = cut(year, c(1998, 2003, 2008, 2013), labels = 1:3, right = TRUE))
+
+# conversion table
+conv_table = read.csv(paste(geopath, 'SGG_1995_2018_Conversion_Table_201108.csv', sep = ''), fileEncoding = 'EUC-KR')
+conv_table_e = conv_table %>%
+    filter((from_year >= 1999 & from_year <= 2013) | tocode == 29010) %>%
+    dplyr::select(fromcode, tocode)
+
+# Excluding integrated cities
+sgg_excl = c(38110, 37010, 35010, 31100, 31050, 31040, 31020, 31010)
+
+age_pop_clean_agg = age_pop_clean %>%
+    mutate(
+        sgg_cd_c = plyr::mapvalues(sggcd, conv_table_e$fromcode, conv_table_e$tocode)
+        ) %>%
+    group_by(sgg_cd_c, period, sex, sexcd, age, agecd) %>%
+    summarize(population = sum(population, na.rm = T)) %>%
+    ungroup %>%
+    mutate(sex = plyr::mapvalues(sex, unique(sex), c('Male', 'Female')))
+
+
+load(str_c(drive, '/Manuscript/Clustering_Base_sf_062422.RData'))
+
+# sgg_poly = covar_origin_10_fc %>%
+#     filter(!sgg_cd_c %in% c(23320, 37430) & !grepl('^(39)', sgg_cd_c)) %>%
+#     ms_simplify(keep = 0.125, keep_shapes = TRUE)
+# age_pop_clean_agg %>% dplyr::select(age, agecd) %>% unique %>% arrange(agecd) %>% data.frame
+# age_pop_clean_w = age_pop_clean_agg %>%
+#     filter(agecd %in% c('130', '150','160','180','190','210', '360', '370')) %>%
+#     mutate(agegroup = plyr::mapvalues(agecd, c('130', '150', '160','180','190','210', '360', '370'),
+#                             c('2529', '3034', '3539', '4044', '4549', '5054', '8084', '85p')),
+#            agesex = str_c(sex, "_", agegroup, "_", period)) %>%
+#     dplyr::select(sgg_cd_c, agesex, population) %>%
+#     pivot_wider(names_from = agesex, values_from = population)
+# age_pop_clean_sf = sgg_poly %>%
+#     left_join(age_pop_clean_w %>% mutate(sgg_cd_c = as.numeric(sgg_cd_c)))
+
+## incidence and mortality check
+fc10 = covar_origin_10_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430) & !grepl('^(39)', sgg_cd_c)) %>%
+    ms_simplify(keep = 0.125, keep_shapes = TRUE)
+fc05 = covar_origin_05_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430) & !grepl('^(39)', sgg_cd_c)) %>%
+    ms_simplify(keep = 0.125, keep_shapes = TRUE)
+fc00 = covar_origin_00_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430) & !grepl('^(39)', sgg_cd_c)) %>%
+    ms_simplify(keep = 0.125, keep_shapes = TRUE)
+
+# fc10 = fc10 %>%
+#     mutate(across(matches("^n_*.*_(female)*.*"),
+#               .fns = list(rcrude = ~1e5*./n_p_female_3),
+#               .names = "{fn}_{col}")) %>%
+#     mutate(across(matches("^n_*.*_(male)*.*"),
+#               .fns = list(rcrude = ~1e5*./n_p_male_3),
+#               .names = "{fn}_{col}"))
+# fc05 = fc05 %>%
+#     mutate(across(matches("^n_*.*_(female)*.*"),
+#               .fns = list(rcrude = ~1e5*./n_p_female_2),
+#               .names = "{fn}_{col}")) %>%
+#     mutate(across(matches("^n_*.*_(male)*.*"),
+#               .fns = list(rcrude = ~1e5*./n_p_male_2),
+#               .names = "{fn}_{col}"))
+# fc00 = fc00 %>%
+#     mutate(across(matches("^n_*.*_(female)*.*"),
+#               .fns = list(rcrude = ~1e5*./n_p_female_1),
+#               .names = "{fn}_{col}")) %>%
+#     mutate(across(matches("^n_*.*_(male)*.*"),
+#               .fns = list(rcrude = ~1e5*./n_p_male_1),
+#               .names = "{fn}_{col}"))
+
+
+
+fc10_tc = colnames(fc10)[grep("^ragest_*.*(Stomach_female|Stomach_male|Lung_male)", colnames(fc10))]
+fc05_tc = colnames(fc05)[grep("^ragest_*.*(Stomach_female|Stomach_male|Lung_male)", colnames(fc05))]
+fc00_tc = colnames(fc00)[grep("^ragest_*.*(Stomach_female|Stomach_male|Lung_male)", colnames(fc00))]
+
+fc10_rc = colnames(fc10)[grep("^rcrude_*.*(Stomach_female|Stomach_male|Lung_male)", colnames(fc10))]
+fc05_rc = colnames(fc05)[grep("^rcrude_*.*(Stomach_female|Stomach_male|Lung_male)", colnames(fc05))]
+fc00_rc = colnames(fc00)[grep("^rcrude_*.*(Stomach_female|Stomach_male|Lung_male)", colnames(fc00))]
+
+fc10_asr = fc10 %>% dplyr::select(sgg_cd_c, all_of(fc10_tc))
+fc05_asr = fc05 %>% dplyr::select(sgg_cd_c, all_of(fc05_tc))
+fc00_asr = fc00 %>% dplyr::select(sgg_cd_c, all_of(fc00_tc))
+
+fc10_crr = fc10 %>% dplyr::select(sgg_cd_c, all_of(fc10_rc))
+fc05_crr = fc05 %>% dplyr::select(sgg_cd_c, all_of(fc05_rc))
+fc00_crr = fc00 %>% dplyr::select(sgg_cd_c, all_of(fc00_rc))
+
+fc10_nc = colnames(fc10)[grep("^n_*.*(Stomach_female|Stomach_male|Lung_male)", colnames(fc10))]
+fc05_nc = colnames(fc05)[grep("^n_*.*(Stomach_female|Stomach_male|Lung_male)", colnames(fc05))]
+fc00_nc = colnames(fc00)[grep("^n_*.*(Stomach_female|Stomach_male|Lung_male)", colnames(fc00))]
+
+fc10_ncc = fc10 %>% dplyr::select(sgg_cd_c, all_of(fc10_nc))
+fc05_ncc = fc05 %>% dplyr::select(sgg_cd_c, all_of(fc05_nc))
+fc00_ncc = fc00 %>% dplyr::select(sgg_cd_c, all_of(fc00_nc))
+
+
+
+brks_incmor = c(0, 50, 100, 250, 500, 1000, Inf)
+brks_pop = c(0, 1000, 5000, 20000, 35000, 100000, Inf)
+map_pop = function(sdf, col, brks = brks_incmor) {
+    sdf_selin = sdf %>% filter(grepl('^(11|23)', sgg_cd_c))
+    sdf_buul = sdf %>% filter(grepl('^(21|26)', sgg_cd_c))
+    
+    mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, lwd = 0.1)
+    mf_title(col, pos = "left", tab = TRUE, cex = 1.2, line = 1, inner=FALSE) 
+    mf_inset_on(x = sdf_selin, pos = "topright", cex = .28)
+    # display the target municipality
+    mf_init(sdf_selin)
+    mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, leg_pos = NA, lwd = 0.1, add = TRUE)
+    mf_title("Seoul-Incheon", pos = "left", tab = TRUE, cex = .9, line = 1, inner = TRUE)
+    # close the inset
+    mf_inset_off()
+    mf_inset_on(x = sdf_buul, pos = "bottomright", cex = .2)
+    # display the target municipality
+    mf_init(sdf_buul)
+    mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, leg_pos=NA, lwd = 0.1, add = TRUE)
+    mf_title("Busan-Ulsan", pos = "left", tab = TRUE, cex = .9, line = 1, inner = TRUE)
+    # close the inset
+    mf_inset_off()
+
+}
+
+map_pop_sel = function(sdf, col, brks = brks_incmor) {
+    targ_col = st_drop_geometry(sdf)[,col] %>% unlist
+    thres = quantile(targ_col, 0.8)
+    overwrite_col = ifelse(targ_col >= thres, targ_col, NA)
+    sdf = sdf %>%
+       mutate({{col}} := overwrite_col)
+    
+    sdf_selin = sdf %>% filter(grepl('^(11|23)', sgg_cd_c))
+    sdf_buul = sdf %>% filter(grepl('^(21|26)', sgg_cd_c))
+    
+    mapsf::mf_choro(sdf, var = col, breaks = 'jenks', nbreaks = 5, lwd = 0.1, col_na = 'grey')
+    mf_title(col, pos = "left", tab = TRUE, cex = 1.2, line = 1, inner=FALSE) 
+    mf_inset_on(x = sdf_selin, pos = "topright", cex = .28)
+    # display the target municipality
+    mf_init(sdf_selin)
+    mapsf::mf_choro(sdf, var = col, breaks = 'jenks', nbreaks = 5, leg_pos = NA, lwd = 0.1, add = TRUE, col_na = 'grey')
+    mf_title("Seoul-Incheon", pos = "left", tab = TRUE, cex = .9, line = 1, inner = TRUE)
+    # close the inset
+    mf_inset_off()
+    mf_inset_on(x = sdf_buul, pos = "bottomright", cex = .2)
+    # display the target municipality
+    mf_init(sdf_buul)
+    mapsf::mf_choro(sdf, var = col, breaks = 'jenks', nbreaks = 5, leg_pos=NA, lwd = 0.1, add = TRUE, col_na = 'grey')
+    mf_title("Busan-Ulsan", pos = "left", tab = TRUE, cex = .9, line = 1, inner = TRUE)
+    # close the inset
+    mf_inset_off()
+
+}
+
+
+
+map_pop_control = function(sdf, col, brks = NULL) {
+    sdf_selin = sdf %>% filter(grepl('^(11|23)', sgg_cd_c))
+    sdf_buul = sdf %>% filter(grepl('^(21|26)', sgg_cd_c))
+    #par(mar=c(0,-4,0.33,0.33))
+    titletext_suffix = tolower(str_replace_all(str_extract(col, "(Stomach|Lung)_*.*male"), "_", ", "))
+    periodname = str_c(", period ", str_extract(col, "\\d"))
+    varname = ifelse(grepl("_i_", col), "incidence", 'mortality')
+    titletext = ifelse(grepl('ragest', col), 
+                            str_c("Age standardized ", varname, " rate (", titletext_suffix,  periodname, ")"),
+                            ifelse(grepl('rcrude', col),
+                                str_c("Crude ", varname, " rate (", titletext_suffix, periodname, ")"), str_c("Cases of ", varname, " (", titletext_suffix, periodname, ")")))
+
+    if (is.null(brks)) {
+        mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, lwd = 0.1)
+    } else {
+        mapsf::mf_choro(sdf, var = col, breaks = brks, lwd = 0.1)
+    }
+    mf_title(titletext, pos = "left", tab = TRUE, cex = 1.2, line = 1, inner=FALSE) 
+    mf_inset_on(x = sdf_selin, pos = "topright", cex = .28)
+    # display the target municipality
+    mf_init(sdf_selin)
+    mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, leg_pos = NA, lwd = 0.1, add = TRUE)
+    mf_title("Seoul-Incheon", pos = "left", tab = TRUE, cex = .9, line = 1, inner = TRUE)
+    # close the inset
+    mf_inset_off()
+    mf_inset_on(x = sdf_buul, pos = "bottomright", cex = .2)
+    # display the target municipality
+    mf_init(sdf_buul)
+    mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, leg_pos=NA, lwd = 0.1, add = TRUE)
+    mf_title("Busan-Ulsan", pos = "left", tab = TRUE, cex = .9, line = 1, inner = TRUE)
+    # close the inset
+    mf_inset_off()
+
+}
+
+```
+
+```{r sgg plot (period 1, experimental), echo=F, fig.width=8, fig.height=6, eval = FALSE}
+for (i in colnames(fc00_asr)[2]) {
+    itrans = str_replace(i, "ragest_", "rcrude_")
+    ntrans = str_replace(i, "ragest_", "n_")
+    map_pop_control(fc00_asr, i)
+    map_pop_control(fc00_crr, itrans)
+}
+
+fcms1 = map_pop_control(fc00_asr, "ragest_i_Stomach_male_1")
+```
+
+
+# Period 1
+```{r sgg plot (period 1), echo=F, fig.width=7.2, fig.height=6, eval = FALSE}
+#| layout-ncol: 3
+for (i in colnames(fc00_asr)[-grep('(sgg_cd_c|geom)', colnames(fc00_asr))]) {
+    itrans = str_replace(i, "ragest_", "rcrude_")
+    ntrans = str_replace(i, "ragest_", "n_")
+    map_pop_control(fc00_ncc, ntrans, brks_incmor)
+    map_pop_control(fc00_asr, i)
+    map_pop_control(fc00_crr, itrans)
+}
+```
+
+
+
+# Period 2
+```{r sgg plot (period 2), echo=F, fig.width=7.2, fig.height=6, eval = FALSE}
+#| layout-ncol: 3
+for (i in colnames(fc05_asr)[-grep('(sgg_cd_c|geom)', colnames(fc05_asr))]) {
+    itrans = str_replace(i, "ragest_", "rcrude_")
+    ntrans = str_replace(i, "ragest_", "n_")
+    map_pop_control(fc05_ncc, ntrans, brks_incmor)
+    map_pop_control(fc05_asr, i)
+    map_pop_control(fc05_crr, itrans)
+}
+```
+
+# Period 3
+```{r sgg plot (period 3), echo=F, fig.width=7.2, fig.height=6, eval = FALSE}
+#| layout-ncol: 3
+for (i in colnames(fc10_asr)[-grep('(sgg_cd_c|geom)', colnames(fc10_asr))]) {
+    itrans = str_replace(i, "ragest_", "rcrude_")
+    ntrans = str_replace(i, "ragest_", "n_")
+    map_pop_control(fc10_ncc, ntrans, brks_incmor)
+    map_pop_control(fc10_asr, i)
+    map_pop_control(fc10_crr, itrans)
+}
+```
+
+
+
+# Cases
+```{r sgg plot (cases), echo=F, fig.width=7.2, fig.height=6}
+#| layout-ncol: 3
+fc0010_ncc = fc00_ncc %>%
+    left_join(fc05_ncc %>% st_drop_geometry) %>%
+    left_join(fc10_ncc %>% st_drop_geometry) %>%
+    dplyr::select(order(colnames(.)))
+fc0010_asr = fc00_asr %>%
+    left_join(fc05_asr %>% st_drop_geometry) %>%
+    left_join(fc10_asr %>% st_drop_geometry) %>%
+    dplyr::select(order(colnames(.)))
+fc0010_crr = fc00_crr %>%
+    left_join(fc05_crr %>% st_drop_geometry) %>%
+    left_join(fc10_crr %>% st_drop_geometry) %>%
+    dplyr::select(order(colnames(.)))
+
+
+for (i in colnames(fc0010_ncc)[-grep('(sgg_cd_c|geom)', colnames(fc0010_ncc))]) {
+    map_pop_control(fc0010_ncc, i, brks_incmor)
+}
+```
+
+
+
+# Crude
+```{r sgg plot (crude), echo=F, fig.width=7.2, fig.height=6}
+#| layout-ncol: 3
+for (i in colnames(fc0010_crr)[-grep('(sgg_cd_c|geom)', colnames(fc0010_crr))]) {
+    map_pop_control(fc0010_crr, i)
+}
+```
+
+# Age standardized
+```{r sgg plot (asr), echo=F, fig.width=7.2, fig.height=6}
+#| layout-ncol: 3
+for (i in colnames(fc0010_asr)[-grep('(sgg_cd_c|geom)', colnames(fc0010_asr))]) {
+    map_pop_control(fc0010_asr, i)
+}
+```
+

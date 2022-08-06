@@ -121,6 +121,7 @@ clear_satscan_df = function(filepath, alpha = 0.05, locmin = 2) {
 
 
 p_v0_resl = clear_input(filepath = str_c(rdsdir, "satscan_NPois_uncontrolled_resid.rds"))
+p_va_resl = clear_input(filepath = str_c(rdsdir, "satscan_NPois_age_resid.rds"))
 p_v1_resl = clear_input(filepath = str_c(rdsdir, "satscan_NPois_vset1_resid.rds"))
 p_v2_resl = clear_input(filepath = str_c(rdsdir, "satscan_NPois_vset2_resid.rds"))
 p_v3_resl = clear_input(filepath = str_c(rdsdir, "satscan_NPois_vset3_resid.rds"))
@@ -209,6 +210,7 @@ c00n_gg = c00n %>%
 
 # Overview
 - All inclusive variables
+    - Set a: Age only (elderly population rate, %)
     - Set 1: elderly population rate (%) and higher than bachelor's degree (%)
     - Set 2: Set 1 + including emission, residential exposure, and NDVI
     - Set 3: for periods 2 and 3. All but insurance premium and stomach cancer screening
@@ -216,67 +218,13 @@ c00n_gg = c00n %>%
 
 # Lung Cancer
 ```{r Lung cancer cluster plots, fig.width=10, fig.height = 10, eval = FALSE}
-tmap::tmap_arrange(
-    tmap_satscan(covar_origin_00_fc, p_v0_resl[["Lung_p1_i_n_total_"]]) + 
-        tm_layout(title = 'Lung cancer incidence count\n(1999-2003, All sexes, Uncontrolled)', frame = FALSE),
-    tmap_satscan(covar_origin_00_fc, p_v1_resl[["Lung_p1_i_n_total_v1"]]) + 
-        tm_layout(title = 'Lung cancer incidence count\n(1999-2003, All sexes, Variable set 1)', frame = FALSE),
-    tmap_satscan(covar_origin_00_fc, p_v2_resl[["Lung_p1_i_n_total_v2"]]) + 
-        tm_layout(title = 'Lung cancer incidence count\n(1999-2003, All sexes, Variable set 2)', frame = FALSE),
-    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
-    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
-    tmap_satscan(covar_origin_05_fc, p_v0_resl[["Lung_p2_i_n_total_"]]) + 
-        tm_layout(title = 'Lung cancer incidence count\n(2004-2008, All sexes, Uncontrolled)', frame = FALSE),
-    tmap_satscan(covar_origin_05_fc, p_v1_resl[["Lung_p2_i_n_total_v1"]]) + 
-        tm_layout(title = 'Lung cancer incidence count\n(2004-2008, All sexes, Variable set 1)', frame = FALSE),
-    tmap_satscan(covar_origin_05_fc, p_v2_resl[["Lung_p2_i_n_total_v2"]]) + 
-        tm_layout(title = 'Lung cancer incidence count\n(2004-2008, All sexes, Variable set 2)', frame = FALSE),
-    tmap_satscan(covar_origin_05_fc, p_v3_resl[["Lung_p2_i_n_total_v3"]]) + 
-        tm_layout(title = 'Lung cancer incidence count\n(2004-2008, All sexes, Variable set 3)', frame = FALSE),
-    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
-    tmap_satscan(covar_origin_10_fc, p_v0_resl[["Lung_p3_i_n_total_"]]) + 
-        tm_layout(title = 'Lung cancer incidence count\n(2009-2013, All sexes, Uncontrolled)', frame = FALSE),
-    tmap_satscan(covar_origin_10_fc, p_v1_resl[["Lung_p3_i_n_total_v1"]]) + 
-        tm_layout(title = 'Lung cancer incidence count\n(2009-2013, All sexes, Variable set 1)', frame = FALSE),
-    tmap_satscan(covar_origin_10_fc, p_v2_resl[["Lung_p3_i_n_total_v2"]]) + 
-        tm_layout(title = 'Lung cancer incidence count\n(2009-2013, All sexes, Variable set 2)', frame = FALSE),
-    tmap_satscan(covar_origin_10_fc, p_v3_resl[["Lung_p3_i_n_total_v3"]]) + 
-        tm_layout(title = 'Lung cancer incidence count\n(2009-2013, All sexes, Variable set 3)', frame = FALSE),
-    tmap_satscan(covar_origin_10_fc, p_v4_resl[["Lung_p3_i_n_total_v4"]]) + 
-        tm_layout(title = 'Lung cancer incidence count\n(2009-2013, All sexes, Variable set 4)', frame = FALSE),
-    ncol = 5
-)
+tmap_satscan(covar_origin_00_fc, p_v1_resl[["Lung_p1_i_n_total_va"]]) + 
+        tm_layout(title = 'Lung cancer incidence count\n(1999-2003, All sexes, age variable)', frame = FALSE)
+tmap_satscan(covar_origin_05_fc, p_v1_resl[["Lung_p2_i_n_total_va"]]) + 
+        tm_layout(title = 'Lung cancer incidence count\n(2004-2008, All sexes, age variable)', frame = FALSE)
+tmap_satscan(covar_origin_10_fc, p_v1_resl[["Lung_p3_i_n_total_va"]]) + 
+        tm_layout(title = 'Lung cancer incidence count\n(2009-2013, All sexes, age variable)', frame = FALSE)
 
-tmap::tmap_arrange(
-    tmap_satscan(covar_origin_00_fc, p_v0_resl[["Lung_p1_d_n_total_"]]) + 
-        tm_layout(title = 'Lung cancer mortality count\n(1999-2003, All sexes, Uncontrolled)', frame = FALSE),
-    tmap_satscan(covar_origin_00_fc, p_v1_resl[["Lung_p1_d_n_total_v1"]]) + 
-        tm_layout(title = 'Lung cancer mortality count\n(1999-2003, All sexes, Variable set 1)', frame = FALSE),
-    tmap_satscan(covar_origin_00_fc, p_v2_resl[["Lung_p1_d_n_total_v2"]]) + 
-        tm_layout(title = 'Lung cancer mortality count\n(1999-2003, All sexes, Variable set 2)', frame = FALSE),
-    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
-    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
-    tmap_satscan(covar_origin_05_fc, p_v0_resl[["Lung_p2_d_n_total_"]]) + 
-        tm_layout(title = 'Lung cancer mortality count\n(2004-2008, All sexes, Uncontrolled)', frame = FALSE),
-    tmap_satscan(covar_origin_05_fc, p_v1_resl[["Lung_p2_d_n_total_v1"]]) + 
-        tm_layout(title = 'Lung cancer mortality count\n(2004-2008, All sexes, Variable set 1)', frame = FALSE),
-    tmap_satscan(covar_origin_05_fc, p_v2_resl[["Lung_p2_d_n_total_v2"]]) + 
-        tm_layout(title = 'Lung cancer mortality count\n(2004-2008, All sexes, Variable set 2)', frame = FALSE),
-    tmap_satscan(covar_origin_05_fc, p_v3_resl[["Lung_p2_d_n_total_v3"]]) + 
-        tm_layout(title = 'Lung cancer mortality count\n(2004-2008, All sexes, Variable set 3)', frame = FALSE),
-    tm_shape(covar_origin_00_fc) + tm_borders('transparent') + tm_layout(frame = FALSE),
-    tmap_satscan(covar_origin_10_fc, p_v0_resl[["Lung_p3_d_n_total_"]]) + 
-        tm_layout(title = 'Lung cancer mortality count\n(2009-2013, All sexes, Uncontrolled)', frame = FALSE),
-    tmap_satscan(covar_origin_10_fc, p_v1_resl[["Lung_p3_d_n_total_v1"]]) + 
-        tm_layout(title = 'Lung cancer mortality count\n(2009-2013, All sexes, Variable set 1)', frame = FALSE),
-    tmap_satscan(covar_origin_10_fc, p_v2_resl[["Lung_p3_d_n_total_v2"]]) + 
-        tm_layout(title = 'Lung cancer mortality count\n(2009-2013, All sexes, Variable set 2)', frame = FALSE),
-    tmap_satscan(covar_origin_10_fc, p_v3_resl[["Lung_p3_d_n_total_v3"]]) + 
-        tm_layout(title = 'Lung cancer mortality count\n(2009-2013, All sexes, Variable set 3)', frame = FALSE),
-    tmap_satscan(covar_origin_10_fc, p_v4_resl[["Lung_p3_d_n_total_v4"]]) + 
-        tm_layout(title = 'Lung cancer mortality count\n(2009-2013, All sexes, Variable set 4)', frame = FALSE),
-    ncol = 5
-)
 
 
 ```

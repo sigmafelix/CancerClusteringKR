@@ -138,9 +138,9 @@ fc10_tc = colnames(fc10)[grep("^n_*.*(Stomach_female|Stomach_male|Lung_male)", c
 fc05_tc = colnames(fc05)[grep("^n_*.*(Stomach_female|Stomach_male|Lung_male)", colnames(fc05))]
 fc00_tc = colnames(fc00)[grep("^n_*.*(Stomach_female|Stomach_male|Lung_male)", colnames(fc00))]
 
-fc10 = fc10 %>% dplyr::select(sgg_cd_c, all_of(fc10_tc))
-fc05 = fc05 %>% dplyr::select(sgg_cd_c, all_of(fc05_tc))
-fc00 = fc00 %>% dplyr::select(sgg_cd_c, all_of(fc00_tc))
+fc10_nc = fc10 %>% dplyr::select(sgg_cd_c, all_of(fc10_tc))
+fc05_nc = fc05 %>% dplyr::select(sgg_cd_c, all_of(fc05_tc))
+fc00_nc = fc00 %>% dplyr::select(sgg_cd_c, all_of(fc00_tc))
 
 brks_incmor = c(0, 50, 100, 250, 500, 1000, Inf)
 brks_pop = c(0, 1000, 5000, 20000, 35000, 100000, Inf)

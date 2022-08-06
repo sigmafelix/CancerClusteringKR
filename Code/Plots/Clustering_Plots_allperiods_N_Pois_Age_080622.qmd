@@ -1,0 +1,269 @@
+---
+title: "Stomach and lung cancer incidence/mortality clustering results (Poisson)"
+author: "Insang Song"
+date: 08-02-2022
+theme: "spacelab"
+format: 
+  html:
+    self-contained: true
+    toc: true
+    fig_caption: true
+---
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+# Change log
+
+- 02/12/2022
+    - The default value of `alpha` in the package we use was 0.1; this documents is based on `alpha=0.05`.
+    - Primary cluster (most significant cluster) has darker color (i.e., dark red)
+    
+- 02/17/2022    
+    - Variable sets 3 and 4 were applied
+    - TODO: exclude isles and run period 3 analysis with available explanatory factors
+
+- 03/16/2022
+    - Excluded isles (Ulleung, Ongjin)
+    - `ubpop` from 0.5 to 0.35, `alpha` from 0.05 to 0.01
+
+- 04/23/2022
+    - Switched to SaTScan
+    - All periods & covariate controls
+
+- 04/28/2022
+    - Residuals (normal model)
+
+- 05/19/2022
+    - Excluding Jeju and Seogwipo
+    - Gini-optimized clusters
+
+- 06/17/2022
+    - Excluded all-sex cases
+    - Weighted normal model using the number of cases
+    - Gini-optimization is not available for weighted normal models
+
+- 06/22/2022
+    - Fixed the case and population parameter settings in SaTScan software
+
+- 06/24/2022
+    - Fixed data aggregation errors
+    - Redo analysis
+
+- 06/25/2022
+    - For covariate controlled models, the weighted normal model will not be applied
+    - The maximum cluster size (no matter it is subject to "reported" or "generally analyzed" configuration) does not work in weighted normal models; The maximum percentage of spatial units is now set 35% 
+    - `alpha` reset to 0.05
+
+- 08/02/2022
+    - Poisson model
+
+```{r}
+source('../Base/base_functions.R')
+options(repos = 'https://cran.seoul.go.kr')
+if (!require(pacman)) { install.packages('pacman') } 
+
+p_load(tidyverse, sf, tmap, stargazer, smerc, DClusterm, kableExtra, patchwork, rmapshaper, spdep)
+
+username = 'sigma'
+basedir = sprintf('/mnt/c/Users/%s/', username)
+rdatafiles = list.files(path = str_c(basedir, 'Documents/GP/'), pattern = '*.RData', full.names = TRUE)
+geopath = str_c(basedir, "OneDrive/Data/Korea/")
+drive = str_c(basedir, "OneDrive/NCC_Project/CancerClustering/")
+geopath = str_c(basedir, "OneDrive/Data/Korea/")
+dbdir = drive  
+rdsdir = drive#sprintf("/mnt/c/Users/%s/OneDrive/NCC_Project/CancerClustering/", username)
+
+```
+
+
+
+
+```{r}
+load(str_c(drive, '/Manuscript/Clustering_Base_sf_062422.RData'))
+
+covar_origin_10_fc = covar_origin_10_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430, 39010, 39020)) %>%
+    ms_simplify(keep = 0.125, keep_shapes = TRUE)
+covar_origin_05_fc = covar_origin_05_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430, 39010, 39020)) %>%
+    ms_simplify(keep = 0.125, keep_shapes = TRUE)
+covar_origin_00_fc = covar_origin_00_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430, 39010, 39020)) %>%
+    ms_simplify(keep = 0.125, keep_shapes = TRUE)
+
+clear_input = function(filepath, alpha = 0.05, locmin = 2) {
+    # alpha: significance level
+    # locmin: how many points should be included at least?
+    res = read_rds(filepath)
+    labels = as.data.frame(str_split_fixed(res$analysis_title, "_", 6))
+    colnames(labels) = c("cancertype", "period", "measure", "target", "sex", "vset")
+    res = res %>%
+          bind_cols(labels, .) %>%
+          filter(pvalue <= alpha & number_locs >= locmin)
+    resl = res %>% split(., .$analysis_title)
+    return(resl)
+}
+
+clear_satscan_df = function(filepath, alpha = 0.05, locmin = 2) {
+    # alpha: significance level
+    # locmin: how many points should be included at least?
+    res = read_rds(filepath)
+    labels = as.data.frame(str_split_fixed(res$analysis_title, "_", 6))
+    colnames(labels) = c("cancertype", "period", "measure", "target", "sex", "vset")
+    res = res %>%
+          bind_cols(labels, .) %>%
+          filter(number_locs >= locmin)
+    return(res)
+}
+
+
+
+p_va_resl = clear_input(filepath = str_c(rdsdir, "satscan_NPois_age_resid.rds"))
+
+
+```
+
+```{r include=FALSE, eval=FALSE}
+p_v0_resdf = clear_satscan_df(filepath = str_c(rdsdir, "satscan_ASMR_uncontrolled_resid.rds"))
+p_v1_resdf = clear_satscan_df(filepath = str_c(rdsdir, "satscan_ASMR_vset1_resid.rds"))
+p_v2_resdf = clear_satscan_df(filepath = str_c(rdsdir, "satscan_ASMR_vset2_resid.rds"))
+p_v3_resdf = clear_satscan_df(filepath = str_c(rdsdir, "satscan_ASMR_vset3_resid.rds"))
+p_v4_resdf = clear_satscan_df(filepath = str_c(rdsdir, "satscan_ASMR_vset4_resid.rds"))
+
+
+```
+```{r include=FALSE, eval=FALSE}
+make_shortdf = function(sfd) {
+    sfd_d =
+        sfd %>%
+        dplyr::select(sgg_cd_c, matches('^ragest*.*Lung_male.*|^ragest*.*_Stomach_(male|female).*')) %>%
+        st_drop_geometry %>%
+        pivot_longer(cols = 2:ncol(.))
+    labelsc = as.data.frame(str_split_fixed(sfd_d$name, "_", 5))
+    colnames(labelsc) = c("measure", "target", "cancertype", "sex", "period")
+    sfd_d = bind_cols(sfd_d, labelsc)
+    return(sfd_d)
+}
+
+make_shortdf2 = function(sfd) {
+    sfd_d =
+        sfd %>%
+        dplyr::select(sgg_cd_c, matches('^n*.*Lung_male.*|^n*.*_Stomach_(male|female).*')) %>%
+        st_drop_geometry %>%
+        pivot_longer(cols = 2:ncol(.))
+    labelsc = as.data.frame(str_split_fixed(sfd_d$name, "_", 5))
+    colnames(labelsc) = c("measure", "target", "cancertype", "sex", "period")
+    sfd_d = bind_cols(sfd_d, labelsc)
+    return(sfd_d)
+}
+
+c10 = make_shortdf(covar_origin_10_fc)
+c05 = make_shortdf(covar_origin_05_fc)
+c00 = make_shortdf(covar_origin_00_fc)
+
+c10_gg = c10 %>%
+    ggplot(data = ., mapping = aes(x = value)) +
+    theme_bw() +
+    geom_histogram(bins = 50) +
+    facet_wrap(target * cancertype ~ sex) 
+c05_gg = c05 %>%
+    ggplot(data = ., mapping = aes(x = value)) +
+    theme_bw() +
+    geom_histogram(bins = 50) +
+    facet_wrap(target * cancertype ~ sex) 
+c00_gg = c00 %>%
+    ggplot(data = ., mapping = aes(x = value)) +
+    theme_bw() +
+    geom_histogram(bins = 50) +
+    facet_wrap(target * cancertype ~ sex) 
+
+c10n = make_shortdf2(covar_origin_10_fc)
+c05n = make_shortdf2(covar_origin_05_fc)
+c00n = make_shortdf2(covar_origin_00_fc)
+
+c10n_gg = c10n %>%
+    ggplot(data = ., mapping = aes(x = value)) +
+    theme_bw() +
+    geom_histogram(bins = 50) +
+    facet_wrap(target * cancertype ~ sex) 
+c05n_gg = c05n %>%
+    ggplot(data = ., mapping = aes(x = value)) +
+    theme_bw() +
+    geom_histogram(bins = 50) +
+    facet_wrap(target * cancertype ~ sex) 
+c00n_gg = c00n %>%
+    ggplot(data = ., mapping = aes(x = value)) +
+    theme_bw() +
+    geom_histogram(bins = 50) +
+    facet_wrap(target * cancertype ~ sex) 
+
+
+```
+
+
+# Overview
+- All inclusive variables
+    - Set a: Age only (elderly population rate, %)
+    - Set 1: elderly population rate (%) and higher than bachelor's degree (%)
+    - Set 2: Set 1 + including emission, residential exposure, and NDVI
+    - Set 3: for periods 2 and 3. All but insurance premium and stomach cancer screening
+    - Set 4: for period 3 only. All variables.
+
+# Lung Cancer
+```{r Lung cancer cluster plots, fig.width=5, fig.height =6.5}
+#| layout-ncol: 3
+tmap_satscan(covar_origin_00_fc, p_va_resl[["Lung_p1_i_n_male_va"]]) + 
+        tm_layout(title = 'Lung cancer incidence count\n(1999-2003, Male, age variable)', frame = FALSE)
+tmap_satscan(covar_origin_05_fc, p_va_resl[["Lung_p2_i_n_male_va"]]) + 
+        tm_layout(title = 'Lung cancer incidence count\n(2004-2008, Male, age variable)', frame = FALSE)
+tmap_satscan(covar_origin_10_fc, p_va_resl[["Lung_p3_i_n_male_va"]]) + 
+        tm_layout(title = 'Lung cancer incidence count\n(2009-2013, Male, age variable)', frame = FALSE)
+
+
+tmap_satscan(covar_origin_00_fc, p_va_resl[["Lung_p1_d_n_male_va"]]) + 
+        tm_layout(title = 'Lung cancer mortality count\n(1999-2003, Male, age variable)', frame = FALSE)
+tmap_satscan(covar_origin_05_fc, p_va_resl[["Lung_p2_d_n_male_va"]]) + 
+        tm_layout(title = 'Lung cancer mortality count\n(2004-2008, Male, age variable)', frame = FALSE)
+tmap_satscan(covar_origin_10_fc, p_va_resl[["Lung_p3_d_n_male_va"]]) + 
+        tm_layout(title = 'Lung cancer mortality count\n(2009-2013, Male, age variable)', frame = FALSE)
+
+
+
+```
+
+```{r stomach: sex stratified, fig.width=5, fig.height = 6.5}
+#| layout-ncol: 3
+tmap_satscan(covar_origin_00_fc, p_va_resl[["Stomach_p1_i_n_male_va"]]) + 
+        tm_layout(title = 'Stomach cancer incidence count\n(1999-2003, Male, age variable)', frame = FALSE)
+tmap_satscan(covar_origin_05_fc, p_va_resl[["Stomach_p2_i_n_male_va"]]) + 
+        tm_layout(title = 'Stomach cancer incidence count\n(2004-2008, Male, age variable)', frame = FALSE)
+tmap_satscan(covar_origin_10_fc, p_va_resl[["Stomach_p3_i_n_male_va"]]) + 
+        tm_layout(title = 'Stomach cancer incidence count\n(2009-2013, Male, age variable)', frame = FALSE)
+
+
+tmap_satscan(covar_origin_00_fc, p_va_resl[["Stomach_p1_d_n_male_va"]]) + 
+        tm_layout(title = 'Stomach cancer mortality count\n(1999-2003, Male, age variable)', frame = FALSE)
+tmap_satscan(covar_origin_05_fc, p_va_resl[["Stomach_p2_d_n_male_va"]]) + 
+        tm_layout(title = 'Stomach cancer mortality count\n(2004-2008, Male, age variable)', frame = FALSE)
+tmap_satscan(covar_origin_10_fc, p_va_resl[["Stomach_p3_d_n_male_va"]]) + 
+        tm_layout(title = 'Stomach cancer mortality count\n(2009-2013, Male, age variable)', frame = FALSE)
+        
+tmap_satscan(covar_origin_00_fc, p_va_resl[["Stomach_p1_i_n_female_va"]]) + 
+        tm_layout(title = 'Stomach cancer incidence count\n(1999-2003, Female, age variable)', frame = FALSE)
+tmap_satscan(covar_origin_05_fc, p_va_resl[["Stomach_p2_i_n_female_va"]]) + 
+        tm_layout(title = 'Stomach cancer incidence count\n(2004-2008, Female, age variable)', frame = FALSE)
+tmap_satscan(covar_origin_10_fc, p_va_resl[["Stomach_p3_i_n_female_va"]]) + 
+        tm_layout(title = 'Stomach cancer incidence count\n(2009-2013, Female, age variable)', frame = FALSE)
+
+
+tmap_satscan(covar_origin_00_fc, p_va_resl[["Stomach_p1_d_n_female_va"]]) + 
+        tm_layout(title = 'Stomach cancer mortality count\n(1999-2003, Female, age variable)', frame = FALSE)
+tmap_satscan(covar_origin_05_fc, p_va_resl[["Stomach_p2_d_n_female_va"]]) + 
+        tm_layout(title = 'Stomach cancer mortality count\n(2004-2008, Female, age variable)', frame = FALSE)
+tmap_satscan(covar_origin_10_fc, p_va_resl[["Stomach_p3_d_n_female_va"]]) + 
+        tm_layout(title = 'Stomach cancer mortality count\n(2009-2013, Female, age variable)', frame = FALSE)
+
+
+```

@@ -1,6 +1,6 @@
 ### SaTScan standalone batch
 ### June 22, 2022
-### Last revised Aug 2, 2022
+### Last revised Aug 6, 2022
 ### Insang Song (sigmafelix@hotmail.com)
 
 
@@ -54,9 +54,9 @@ all_models = expand.grid(
            modeltitle = str_c(cancertype, "_p", period, mid_title, valuetype, sex))
 
 
-indx_p1 = 1:8# 16
-indx_p2 = 17:24# 32
-indx_p3 = 33:40# 48
+indx_p1 = 1:8 + 8# 16
+indx_p2 = 17:24 + 8# 32
+indx_p3 = 33:40 + 8# 48
 
 # p1_all = mapply(function(x, y) {
 #     generate_satscan_prm(data = dat1,
@@ -79,7 +79,7 @@ p1_all = mapply(function(x, y) {
                     filename.input = "satscan_base_data_period1.csv",
                     filename.output = str_c(y, ".txt"),
                     col.var = x,
-                    weighted = T,
+                    weighted = F,
                     col.case = x,
                     prm.path = "/home/felix/Documents/test.prm"
                     )
@@ -95,7 +95,7 @@ p2_all = mapply(function(x, y) {
                     filename.input = "satscan_base_data_period2.csv",
                     filename.output = str_c(y, ".txt"),
                     col.var = x,
-                    weighted = T,
+                    weighted = F,
                     col.case = x,
                     prm.path = "/home/felix/Documents/test.prm"
                     )
@@ -111,7 +111,7 @@ p3_all = mapply(function(x, y) {
                     filename.input = "satscan_base_data_period3.csv",
                     filename.output = str_c(y, ".txt"),
                     col.var = x,
-                    weighted = T,
+                    weighted = F,
                     col.case = x, # str_c('n', x)
                     prm.path = "/home/felix/Documents/test.prm"
                     )
@@ -132,7 +132,7 @@ write_rds(p13_all_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_A
 # vset4 = str_c(str_c('^p_*.*_', sex_bb, '$'), '^r_', '^n_pw', '^ap_', '^NDVI_', sep = '|')
 
 # Covariate control (age only) ####
-# run for the period 1 (normal) ####
+# run for the period 1 (Poisson) ####
 p1_all_va = mapply(function(x, y) {
     generate_satscan_prm(data = dat1,
                     title.analysis = str_c(y, 'va'),
@@ -148,7 +148,7 @@ p1_all_va = mapply(function(x, y) {
 
 p1_all_va_df = Reduce(rbind, p1_all_va)
 
-# run for the period 2 (normal) ####
+# run for the period 2 (Poisson) ####
 p2_all_va = mapply(function(x, y) {
     generate_satscan_prm(data = dat2,
                     title.analysis = str_c(y, 'va'),
@@ -165,7 +165,7 @@ p2_all_va = mapply(function(x, y) {
 
 p2_all_va_df = Reduce(rbind, p2_all_va)
 
-# run for the period 3 (normal) ####
+# run for the period 3 (Poisson) ####
 p3_all_va = mapply(function(x, y) {
     generate_satscan_prm(data = dat3,
                     title.analysis = str_c(y, 'va'),
@@ -184,7 +184,7 @@ p3_all_va_df = Reduce(rbind, p3_all_va)
 
 p13_all_va_df = bind_rows(p1_all_va_df, p2_all_va_df) %>%
     bind_rows(p3_all_va_df)
-write_rds(p13_all_va_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_ASMR_age_resid.rds")
+write_rds(p13_all_va_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_NPois_age_resid.rds")
 
 
 

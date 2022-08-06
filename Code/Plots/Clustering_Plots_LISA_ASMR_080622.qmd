@@ -1,0 +1,212 @@
+---
+title: "Stomach and lung cancer incidence/mortality clustering results"
+author: "Insang Song"
+date: 08-06-2022
+format: docx
+---
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+- General description
+    - This document includes all the LISA (aka Local Moran's _I_) maps in South Korea at district level.
+    - Ongjin, Ulleung, Jeju, and Seogwipo were excluded.
+    - We used the age-standardized mortality/incidence rates in the data
+        - For the district unification, we calculated population-weight-averaged rates in any districts that were subject to the calculation.
+
+- Change log
+    - 07/14/2022
+        - Updated data
+
+
+```{r}
+source('../Base/base_functions.R')
+options(repos = 'https://cran.seoul.go.kr')
+if (!require(pacman)) { install.packages('pacman') } 
+
+p_load(tidyverse, sf, stars, raster, starsExtra, readxl, here, tmap, stargazer, smerc, DClusterm, kableExtra, patchwork, rmapshaper, spdep)
+
+username = 'sigma'
+basedir = sprintf('/mnt/c/Users/%s/', username)
+rdatafiles = list.files(path = str_c(basedir, 'Documents/GP/'), pattern = '*.RData', full.names = TRUE)
+geopath = str_c(basedir, "OneDrive/Data/Korea/")
+drive = str_c(basedir, "OneDrive/NCC_Project/CancerClustering/")
+geopath = str_c(basedir, "OneDrive/Data/Korea/")
+dbdir = drive  
+rdsdir = sprintf("/mnt/c/Users/%s/OneDrive/NCC_Project/CancerClustering/", username)
+
+```
+
+
+```{r}
+load(str_c(drive, '/Manuscript/Clustering_Base_sf_062422.RData'))
+
+covar_origin_10_fc = covar_origin_10_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430, 39010, 39020)) %>%
+    ms_simplify(keep = 0.125, keep_shapes = TRUE)
+covar_origin_05_fc = covar_origin_05_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430, 39010, 39020)) %>%
+    ms_simplify(keep = 0.125, keep_shapes = TRUE)
+covar_origin_00_fc = covar_origin_00_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430, 39010, 39020)) %>%
+    ms_simplify(keep = 0.125, keep_shapes = TRUE)
+
+clear_input = function(filepath, alpha = 0.01, locmin = 2) {
+    # alpha: significance level
+    # locmin: how many points should be included at least?
+    res = read_rds(filepath)
+    labels = as.data.frame(str_split_fixed(res$analysis_title, "_", 6))
+    colnames(labels) = c("cancertype", "period", "measure", "target", "sex", "vset")
+    res = res %>%
+          bind_cols(labels, .) %>%
+          filter(pvalue <= alpha & number_locs >= locmin)
+    resl = res %>% split(., .$analysis_title)
+    return(resl)
+}
+
+p_v0_resl = clear_input(filepath = str_c(rdsdir, "satscan_ASMR_uncontrolled_resid.rds"))
+
+```
+
+# Overview
+- Incidence and mortality rates: (Sum of cases) / (Sum of the population)
+- All inclusive variables
+    - Set 1: elderly population rate (%) and higher than bachelor's degree (%)
+    - Set 2: Set 1 + including emission, residential exposure, and NDVI
+    - Set 3: for periods 2 and 3. All but insurance premium and stomach cancer screening
+    - Set 4: for period 3 only. All variables.
+
+# Lung Cancer
+## Incidence
+```{r Lung cancer cluster plots (incidence), fig.width=12, fig.height = 5.6}
+
+tmap::tmap_arrange(
+    map_lisa(covar_origin_00_fc, "ragest_i_Lung_male_1") +
+        tm_layout(title = 'Lung cancer incidence\n(1999-2003, Male, LISA)   ', frame = FALSE),
+    map_lisa(covar_origin_05_fc, "ragest_i_Lung_male_2") +
+        tm_layout(title = 'Lung cancer incidence\n(2004-2008, Male, LISA)   ', frame = FALSE),
+    map_lisa(covar_origin_10_fc, "ragest_i_Lung_male_3") +
+        tm_layout(title = 'Lung cancer incidence\n(2009-2013, Male, LISA)   ', frame = FALSE),
+    ncol = 3)
+tmap::tmap_arrange(
+    tmap_satscan(covar_origin_00_fc, p_v0_resl[["Lung_p1_i_ragest_male_"]]) + 
+        tm_layout(title = 'Lung cancer incidence\n(1999-2003, Male, SaTScan)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v0_resl[["Lung_p2_i_ragest_male_"]]) + 
+        tm_layout(title = 'Lung cancer incidence\n(2004-2008, Male, SaTScan)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v0_resl[["Lung_p3_i_ragest_male_"]]) + 
+        tm_layout(title = 'Lung cancer incidence\n(2009-2013, Male, SaTScan)', frame = FALSE),
+    ncol = 3)
+
+
+```
+
+
+## Mortality
+```{r Lung cancer cluster plots (mortality), fig.width=12, fig.height = 5.6}
+
+tmap::tmap_arrange(
+    map_lisa(covar_origin_00_fc, "ragest_d_Lung_male_1") +
+        tm_layout(title = 'Lung cancer mortality\n(1999-2003, Male, LISA)   ', frame = FALSE),
+    map_lisa(covar_origin_05_fc, "ragest_d_Lung_male_2") +
+        tm_layout(title = 'Lung cancer mortality\n(2004-2008, Male, LISA)   ', frame = FALSE),
+    map_lisa(covar_origin_10_fc, "ragest_d_Lung_male_3") +
+        tm_layout(title = 'Lung cancer mortality\n(2009-2013, Male, LISA)   ', frame = FALSE),
+    ncol = 3)
+tmap::tmap_arrange(
+    tmap_satscan(covar_origin_00_fc, p_v0_resl[["Lung_p1_d_ragest_male_"]]) + 
+        tm_layout(title = 'Lung cancer mortality\n(1999-2003, Male, SaTScan)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v0_resl[["Lung_p2_d_ragest_male_"]]) + 
+        tm_layout(title = 'Lung cancer mortality\n(2004-2008, Male, SaTScan)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v0_resl[["Lung_p3_d_ragest_male_"]]) + 
+        tm_layout(title = 'Lung cancer mortality\n(2009-2013, Male, SaTScan)', frame = FALSE),
+    ncol = 3)
+
+
+```
+
+
+
+
+# Stomach Cancer
+## Incidence
+```{r Stomach cancer cluster plots (incidence), fig.width=12, fig.height = 5.6}
+
+tmap::tmap_arrange(
+    map_lisa(covar_origin_00_fc, "ragest_i_Stomach_female_1") +
+        tm_layout(title = 'Stomach cancer incidence\n(1999-2003, Female, LISA)   ', frame = FALSE),
+    map_lisa(covar_origin_05_fc, "ragest_i_Stomach_female_2") +
+        tm_layout(title = 'Stomach cancer incidence\n(2004-2008, Female, LISA)   ', frame = FALSE),
+    map_lisa(covar_origin_10_fc, "ragest_i_Stomach_female_3") +
+        tm_layout(title = 'Stomach cancer incidence\n(2009-2013, Female, LISA)   ', frame = FALSE),
+    ncol = 3)
+tmap::tmap_arrange(
+    tmap_satscan(covar_origin_00_fc, p_v0_resl[["Stomach_p1_i_ragest_female_"]]) + 
+        tm_layout(title = 'Stomach cancer incidence\n(1999-2003, Female, SaTScan)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v0_resl[["Stomach_p2_i_ragest_female_"]]) + 
+        tm_layout(title = 'Stomach cancer incidence\n(2004-2008, Female, SaTScan)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v0_resl[["Stomach_p3_i_ragest_female_"]]) + 
+        tm_layout(title = 'Stomach cancer incidence\n(2009-2013, Female, SaTScan)', frame = FALSE),
+    ncol = 3)
+
+tmap::tmap_arrange(
+    map_lisa(covar_origin_00_fc, "ragest_i_Stomach_male_1") +
+        tm_layout(title = 'Stomach cancer incidence\n(1999-2003, Male, LISA)   ', frame = FALSE),
+    map_lisa(covar_origin_05_fc, "ragest_i_Stomach_male_2") +
+        tm_layout(title = 'Stomach cancer incidence\n(2004-2008, Male, LISA)   ', frame = FALSE),
+    map_lisa(covar_origin_10_fc, "ragest_i_Stomach_male_3") +
+        tm_layout(title = 'Stomach cancer incidence\n(2009-2013, Male, LISA)   ', frame = FALSE),
+    ncol = 3)
+tmap::tmap_arrange(
+    tmap_satscan(covar_origin_00_fc, p_v0_resl[["Stomach_p1_i_ragest_male_"]]) + 
+        tm_layout(title = 'Stomach cancer incidence\n(1999-2003, Male, SaTScan)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v0_resl[["Stomach_p2_i_ragest_male_"]]) + 
+        tm_layout(title = 'Stomach cancer incidence\n(2004-2008, Male, SaTScan)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v0_resl[["Stomach_p3_i_ragest_male_"]]) + 
+        tm_layout(title = 'Stomach cancer incidence\n(2009-2013, Male, SaTScan)', frame = FALSE),
+    ncol = 3)
+
+
+```
+
+
+## Mortality
+```{r Stomach cancer cluster plots (mortality), fig.width=12, fig.height = 5.6}
+
+tmap::tmap_arrange(
+    map_lisa(covar_origin_00_fc, "ragest_d_Stomach_female_1") +
+        tm_layout(title = 'Stomach cancer mortality\n(1999-2003, Female, LISA)   ', frame = FALSE),
+    map_lisa(covar_origin_05_fc, "ragest_d_Stomach_female_2") +
+        tm_layout(title = 'Stomach cancer mortality\n(2004-2008, Female, LISA)   ', frame = FALSE),
+    map_lisa(covar_origin_10_fc, "ragest_d_Stomach_female_3") +
+        tm_layout(title = 'Stomach cancer mortality\n(2009-2013, Female, LISA)   ', frame = FALSE),
+    ncol = 3)
+tmap::tmap_arrange(
+    tmap_satscan(covar_origin_00_fc, p_v0_resl[["Stomach_p1_d_ragest_female_"]]) + 
+        tm_layout(title = 'Stomach cancer mortality\n(1999-2003, Female, SaTScan)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v0_resl[["Stomach_p2_d_ragest_female_"]]) + 
+        tm_layout(title = 'Stomach cancer mortality\n(2004-2008, Female, SaTScan)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v0_resl[["Stomach_p3_d_ragest_female_"]]) + 
+        tm_layout(title = 'Stomach cancer mortality\n(2009-2013, Female, SaTScan)', frame = FALSE),
+    ncol = 3)
+
+tmap::tmap_arrange(
+    map_lisa(covar_origin_00_fc, "ragest_d_Stomach_male_1") +
+        tm_layout(title = 'Stomach cancer mortality\n(1999-2003, Male, LISA)   ', frame = FALSE),
+    map_lisa(covar_origin_05_fc, "ragest_d_Stomach_male_2") +
+        tm_layout(title = 'Stomach cancer mortality\n(2004-2008, Male, LISA)   ', frame = FALSE),
+    map_lisa(covar_origin_10_fc, "ragest_d_Stomach_male_3") +
+        tm_layout(title = 'Stomach cancer mortality\n(2009-2013, Male, LISA)   ', frame = FALSE),
+    ncol = 3)
+tmap::tmap_arrange(
+    tmap_satscan(covar_origin_00_fc, p_v0_resl[["Stomach_p1_d_ragest_male_"]]) + 
+        tm_layout(title = 'Stomach cancer mortality\n(1999-2003, Male, SaTScan)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v0_resl[["Stomach_p2_d_ragest_male_"]]) + 
+        tm_layout(title = 'Stomach cancer mortality\n(2004-2008, Male, SaTScan)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v0_resl[["Stomach_p3_d_ragest_male_"]]) + 
+        tm_layout(title = 'Stomach cancer mortality\n(2009-2013, Male, SaTScan)', frame = FALSE),
+    ncol = 3)
+
+
+```
+

@@ -665,6 +665,7 @@ generate_satscan_prm = function(data,
         sex_t = str_extract(title.analysis, "(male|female|total)")
         string_search_n =
             switch(vset,
+                    age = str_c('^(p_65p)*.*_', sex_t, '$'),
                     set1 = str_c('^(p_65p|p_hbac)*.*_', sex_t, '$'),
                     set2 = str_c(str_c('^p_*.*_', sex_t, '$'), '^ap_', '^NDVI_', sep = '|'),
                     set3 = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_(?!physmid)', '^ap_', '^NDVI_', sep = '|'),

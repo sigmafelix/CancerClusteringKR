@@ -1,6 +1,6 @@
 ---
 author: "Insang Song"
-date: 08-02-2022
+date: 08-11-2022
 theme: "spacelab"
 format:
   docx:
@@ -333,7 +333,7 @@ for (i in colnames(fc10_asr)[-grep('(sgg_cd_c|geom)', colnames(fc10_asr))]) {
 
 
 # Cases
-```{r sgg plot (cases), echo=F, fig.width=7.2, fig.height=6}
+```{r sgg plot (data prep), echo=F, fig.width=7.2, fig.height=6}
 #| layout-ncol: 3
 fc0010_ncc = fc00_ncc %>%
     left_join(fc05_ncc %>% st_drop_geometry) %>%
@@ -347,7 +347,9 @@ fc0010_crr = fc00_crr %>%
     left_join(fc05_crr %>% st_drop_geometry) %>%
     left_join(fc10_crr %>% st_drop_geometry) %>%
     dplyr::select(order(colnames(.)))
+```
 
+```{r sgg plot (cases), echo=F, fig.width=7.2, fig.height=6}
 
 for (i in colnames(fc0010_ncc)[-grep('(sgg_cd_c|geom)', colnames(fc0010_ncc))]) {
     map_pop_control(fc0010_ncc, i, brks_incmor)
@@ -372,3 +374,63 @@ for (i in colnames(fc0010_asr)[-grep('(sgg_cd_c|geom)', colnames(fc0010_asr))]) 
 }
 ```
 
+
+```{r sgg sma, echo = F, fig.width=7.2, fig.height=6}
+
+map_pop_ex = function(sdf, col, sdf_in, brks = NULL) {
+    sdf_selin = sdf %>% filter(grepl('^(11|23)', sgg_cd_c))
+    sdf_buul = sdf %>% filter(grepl('^(21|26)', sgg_cd_c))
+    #par(mar=c(0,-4,0.33,0.33))
+    titletext_suffix = tolower(str_replace_all(str_extract(col, "(Stomach|Lung)_*.*male"), "_", ", "))
+    periodname = str_c(", period ", str_extract(col, "\\d"))
+    varname = ifelse(grepl("_i_", col), "incidence", 'mortality')
+    titletext = ifelse(grepl('ragest', col), 
+                            str_c("Age standardized ", varname, " rate (", titletext_suffix,  periodname, ")"),
+                            ifelse(grepl('rcrude', col),
+                                str_c("Crude ", varname, " rate (", titletext_suffix, periodname, ")"), str_c("Cases of ", varname, " (", titletext_suffix, periodname, ")")))
+
+    if (is.null(brks)) {
+        mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, lwd = 0.1, leg_title = titletext)
+    } else {
+        mapsf::mf_choro(sdf, var = col, breaks = brks, lwd = 0.1)
+    }
+    
+    sdf_in190 = sdf_in %>% filter(sgg_cd_c == 31190)
+    sdf_in350 = sdf_in %>% filter(sgg_cd_c == 31350)
+
+    mf_map(add = TRUE, x = sdf_in350, border = 'blue', lwd = 3.2, col = 'transparent')
+    mf_map(add = TRUE, x = sdf_in190, border = 'red', lwd = 3.2, col = 'transparent')
+}
+
+fc0010_nccs = fc0010_ncc %>% filter(grepl('^(11|23|31)', sgg_cd_c)) 
+fc0010_crrs = fc0010_crr %>% filter(grepl('^(11|23|31)', sgg_cd_c)) 
+fc0010_asrs = fc0010_asr %>% filter(grepl('^(11|23|31)', sgg_cd_c)) 
+
+fc_select = fc0010_asr %>% filter(sgg_cd_c %in% c(31190, 31350))
+
+png(filename = "/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/Output/Count_Stomach_Mortality_Female_3.png", width = 8, height = 8, units = 'in', res = 300)
+map_pop_ex(fc0010_nccs, "n_d_Stomach_female_3", fc_select, brks_incmor)
+dev.off()
+
+png(filename = "/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/Output/Count_Stomach_Mortality_Male_3.png", width = 8, height = 8, units = 'in', res = 300)
+map_pop_ex(fc0010_nccs, "n_d_Stomach_male_3", fc_select, brks_incmor)
+dev.off()
+
+png(filename = "/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/Output/Cruderate_Stomach_Mortality_Female_3.png", width = 8, height = 8, units = 'in', res = 300)
+map_pop_ex(fc0010_crrs, "rcrude_d_Stomach_female_3", fc_select)
+dev.off()
+
+png(filename = "/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/Output/Cruderate_Stomach_Mortality_Male_3.png", width = 8, height = 8, units = 'in', res = 300)
+map_pop_ex(fc0010_crrs, "rcrude_d_Stomach_male_3", fc_select)
+dev.off()
+
+png(filename = "/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/Output/Agestandardized_Stomach_Mortality_Female_3.png", width = 8, height = 8, units = 'in', res = 300)
+map_pop_ex(fc0010_asrs, "ragest_d_Stomach_female_3", fc_select)
+dev.off()
+
+png(filename = "/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/Output/Agestandardized_Stomach_Mortality_Male_3.png", width = 8, height = 8, units = 'in', res = 300)
+map_pop_ex(fc0010_asrs, "ragest_d_Stomach_male_3", fc_select)
+dev.off()
+
+
+```

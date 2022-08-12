@@ -1,0 +1,195 @@
+---
+title: "Untitled"
+author: "Insang Song"
+date: 08-08-2022
+theme: "spacelab"
+format:
+  html:
+    self-contained: true
+    toc: true
+    fig_caption: true
+---
+
+
+# Data check: population rank
+```{r}
+source('./Code/Base/base_functions.R')
+options(repos = 'https://cran.seoul.go.kr')
+if (!require(pacman)) { install.packages('pacman') } 
+
+p_load(tidyverse, sf, tmap, stargazer, smerc, DClusterm, kableExtra, patchwork, rmapshaper, spdep, patchwork, ggExtra, gridExtra)
+
+username = 'sigma'
+basedir = sprintf('/mnt/c/Users/%s/', username)
+rdatafiles = list.files(path = str_c(basedir, 'Documents/GP/'), pattern = '*.RData', full.names = TRUE)
+geopath = str_c(basedir, "OneDrive/Data/Korea/")
+drive = str_c(basedir, "OneDrive/NCC_Project/CancerClustering/")
+geopath = str_c(basedir, "OneDrive/Data/Korea/")
+dbdir = drive  
+rdsdir = drive#sprintf("/mnt/c/Users/%s/OneDrive/NCC_Project/CancerClustering/", username)
+
+
+load(str_c(drive, '/Manuscript/Clustering_Base_sf_062422.RData'))
+
+covar_origin_10_fc = covar_origin_10_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430, 39010, 39020)) %>%
+    ms_simplify(keep = 0.125, keep_shapes = TRUE)
+covar_origin_05_fc = covar_origin_05_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430, 39010, 39020)) %>%
+    ms_simplify(keep = 0.125, keep_shapes = TRUE)
+covar_origin_00_fc = covar_origin_00_fc %>%
+    filter(!sgg_cd_c %in% c(23320, 37430, 39010, 39020)) %>%
+    ms_simplify(keep = 0.125, keep_shapes = TRUE)
+
+
+```
+
+
+
+#
+```{r}
+covar_origin_10_fc %>%
+    filter(grepl('^(11|23|31)', sgg_cd_c)) %>%
+    arrange(-n_p_total_3) %>%
+    dplyr::select(sgg_cd_c, n_p_total_3, n_p_male_3, n_p_female_3, matches('*.*d_Stomach_*.*(male)_3')) 
+covar_origin_10_fc %>%
+    filter(grepl('^(11|23|31)', sgg_cd_c)) %>%
+    arrange(n_p_total_3) %>%
+    dplyr::select(sgg_cd_c, n_p_total_3, n_p_male_3, n_p_female_3, matches('*.*d_Stomach_*.*(male)_3'))
+
+
+
+## Yeoncheon, Yongin
+covar_origin_10_fc %>%
+    filter(grepl('^(11|23|31)', sgg_cd_c)) %>%
+    arrange(-n_p_total_3) %>%
+    dplyr::select(sgg_cd_c, n_p_male_3, n_p_female_3, matches('*.*d_Stomach_*.*(male)_3')) %>%
+    filter(sgg_cd_c %in% c(31190, 31350)) %>%
+    st_drop_geometry %>% 
+    pivot_longer(cols = 2:ncol(.)) %>%
+    mutate(valuetype = rep(rep(c('Population', 'Count', 'Crude rate', 'Age-standardized rate'), each=2), 2),
+           sex = str_extract(name, '(male|female)'),
+           district = rep(c('Yongin', 'Yeoncheon'), each = 8)) -> co10fc
+
+co10fcw = co10fc %>%
+    dplyr::select(district, sex, valuetype, value) %>%
+    pivot_wider(names_from = valuetype, values_from = value) %>%
+    mutate_at(.vars = vars(-1:-2), .funs = list(~sprintf('%.1f', .))) %>%
+    arrange(district, sex)
+
+```
+
+```{r}
+age_pop = readxl::read_excel(str_c(drive, "Data/Population/MidPopulation_1999_2013_age.xlsx"))
+colnames(age_pop) = c('sggcd', 'sggnm', 'sexcd', 'sex', 'agecd', 'age', 'year', 'population')
+age_pop_clean = age_pop %>%
+    mutate(year = as.numeric(substr(year, 1, 4)),
+           period = cut(year, c(1998, 2003, 2008, 2013), labels = 1:3, right = TRUE))
+
+# conversion table
+conv_table = read.csv(paste(geopath, 'SGG_1995_2018_Conversion_Table_201108.csv', sep = ''), fileEncoding = 'EUC-KR')
+conv_table_e = conv_table %>%
+    filter((from_year >= 1999 & from_year <= 2013) | tocode == 29010) %>%
+    dplyr::select(fromcode, tocode)
+
+# Excluding integrated cities
+sgg_excl = c(38110, 37010, 35010, 31100, 31050, 31040, 31020, 31010)
+
+age_pop_clean_agg = age_pop_clean %>%
+    mutate(
+        sgg_cd_c = plyr::mapvalues(sggcd, conv_table_e$fromcode, conv_table_e$tocode)
+        ) %>%
+    group_by(sgg_cd_c, period, sex, sexcd, age, agecd) %>%
+    summarize(population = sum(population, na.rm = T)) %>%
+    ungroup %>%
+    mutate(sex = plyr::mapvalues(sex, unique(sex), c('Male', 'Female')))
+
+age_pop_clean_aggs = age_pop_clean_agg %>%
+    filter(sgg_cd_c %in% c('31190', '31350'))
+
+age_pop_clean_aggss = 
+    age_pop_clean_aggs %>%
+        group_by(sgg_cd_c, period) %>%
+        mutate(population_percent = 100 * population / sum(population, na.rm = TRUE)) %>%
+        ungroup %>%
+        mutate(population_percent = if_else(sex == 'Female', -population_percent, population_percent),
+            sgg = if_else(sgg_cd_c == '31190', 'Yongin (N=8,783,020)', 'Yeoncheon (N=224,418)')) %>%
+        filter(period == 3 & !agecd %in% c(440, 340, 380, 410, 430)) %>%
+        arrange(sgg_cd_c, sex, agecd)
+agelabels = age_pop_clean_aggss$age %>% unique
+
+
+age_pop_gg = 
+    age_pop_clean_aggss %>%
+        ggplot(data = ., mapping = aes(x = agecd, label = age, y = population_percent, fill = sex)) +
+            geom_col() +
+            scale_x_discrete(labels = agelabels) +
+            scale_y_continuous(limits = c(-6, 6), breaks = seq.int(-6, 6, 3), labels = c(6, 3, 0, 3, 6)) +
+            coord_flip() +
+            xlab('Age group') + ylab('Proportion (%)') +
+            facet_wrap(~sgg) +
+            theme_minimal() +
+            theme(legend.title = element_blank(),
+                  legend.position = 'bottom',
+                  strip.text = element_text(size = 14))
+
+# ggsave(age_pop_gg, filename = "/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/Output/Age_groups_pyramid_081122.png", device = 'png',
+#          width = 30, height = 27, units = 'cm', dpi = 300, scale = 0.66, bg = 'white')
+
+
+
+co10gg = tableGrob(co10fcw, rows = NULL)
+
+age_pop_gg_tab = (age_pop_gg / co10gg) + plot_layout(nrow = 2, heights = c(0.7, 0.3))
+ggsave(age_pop_gg_tab, filename = "/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/Output/Age_groups_pyramid_table_081122.png", device = 'png',
+         width = 40, height = 36, units = 'cm', dpi = 300, scale = 0.66, bg = 'white')
+
+
+```
+
+
+# Maps
+```{r}
+# preparation: s-g-i
+minimap = 
+covar_origin_10_fc %>%
+    filter(grepl('^(11|23|31)', sgg_cd_c)) %>%
+    mutate(targ = ifelse(sgg_cd_c %in% c(31190, 31350), "blue", NA)) %>%
+    mutate(label = ifelse(sgg_cd_c == 31190, "Yongin", ifelse(sgg_cd_c == 31350, "Yeoncheon", NA)))
+
+basemap = 
+covar_origin_10_fc %>%
+    filter(grepl('^(11|23|31)', sgg_cd_c)) %>%
+    mutate(targ = ifelse(sgg_cd_c %in% c(31190, 31350), "blue", NA)) %>%
+    mutate(label = ifelse(sgg_cd_c == 31190, "Yongin", ifelse(sgg_cd_c == 31350, "Yeoncheon", NA))) %>%
+    mutate_at(.vars = vars(-sgg_cd_c, -geom), .funs = list(~ifelse(!is.na(targ), ., NA)))
+
+basemap_sets = basemap %>%
+    filter(!is.na(targ)) %>%
+    dplyr::select(sgg_cd_c, n_p_male_3, n_p_female_3, matches('*.*d_Stomach_*.*(male)_3')) %>%
+    pivot_longer(cols = 2:(ncol(.)-1)) %>%
+    rename(value_orig = value) %>%
+    left_join(co10fc) %>%
+    mutate(sex = factor(sex, levels = c('female', 'male'), labels = c('Female', 'Male')),
+           valuetype = factor(valuetype, levels = c('Count', 'Crude rate', 'Age-standardized rate')),
+           valued = ifelse(is.integer(value), as.character(value), as.character(round(value, 1))))
+
+```
+
+```{r}
+tm_shape(basemap_sets %>% filter(sgg_cd_c == '31190' & valuetype != 'Population')) +
+    tm_borders('black') +
+    tm_text('valued') +
+    tm_facets(c('valuetype', 'sex'))
+
+
+tmbase = 
+    tm_shape(basemap) +
+        tm_borders('dark grey') +
+        tm_fill('targ') +
+        tm_text('label', size = 1) + 
+        tm_layout(frame = FALSE)
+tmap_save(tmbase, '/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/Output/basemap_081122.png', width = 8, height = 9, units = 'in', dpi = 300)
+
+
+```

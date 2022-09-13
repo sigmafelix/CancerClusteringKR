@@ -1,12 +1,12 @@
 ---
 title: "Stomach and lung cancer incidence/mortality clustering results"
 author: "Insang Song"
-date: 08-26-2022
+date: 09-12-2022
 theme: "spacelab"
 format: 
   html:
     toc: true
-    self-contained: true
+    embed-resources: true
 ---
 
 ```{r, echo = FALSE}
@@ -70,6 +70,12 @@ clear_input = function(filepath, alpha = 0.01, locmin = 2) {
 }
 
 p_v0_resl = clear_input(filepath = str_c(rdsdir, "satscan_ASMR_uncontrolled_resid.rds"))
+p_va_resl = clear_input(filepath = str_c(rdsdir, "satscan_ASMR_age_resid.rds"))
+p_v1_resl = clear_input(filepath = str_c(rdsdir, "satscan_ASMR_vset1_resid.rds"))
+p_v2_resl = clear_input(filepath = str_c(rdsdir, "satscan_ASMR_vset2_resid.rds"))
+p_v3_resl = clear_input(filepath = str_c(rdsdir, "satscan_ASMR_vset3_resid.rds"))
+p_v4_resl = clear_input(filepath = str_c(rdsdir, "satscan_ASMR_vset4_resid.rds"))
+
 
 ```
 
@@ -214,3 +220,234 @@ tmap::tmap_arrange(
 
 ```
 
+
+# Variable sets 1-3
+
+```{r varset 1-4, fig.width=15, fig.height = 12}
+
+tmap::tmap_arrange(
+    tmap_satscan(covar_origin_00_fc, p_v0_resl[["Lung_p1_i_ragest_male_"]], area = TRUE) + 
+        tm_layout(title = 'Lung cancer incidence rate\n(1999-2003, Male, Uncontrolled)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_va_resl[["Lung_p1_i_ragest_male_va"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer incidence rate\n(1999-2003, Male, age variable)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_v1_resl[["Lung_p1_i_ragest_male_v1"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer incidence rate\n(1999-2003, Male, set 1)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_v2_resl[["Lung_p1_i_ragest_male_v2"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer incidence rate\n(1999-2003, Male, set 2)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_v3_resl[["Lung_p1_i_ragest_male_v3"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer incidence rate\n(1999-2003, Male, set 3)', frame = FALSE),
+
+    tmap_satscan(covar_origin_05_fc, p_v0_resl[["Lung_p2_i_ragest_male_"]], area = TRUE) + 
+        tm_layout(title = 'Lung cancer incidence rate\n(2004-2008, Male, Uncontrolled)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_va_resl[["Lung_p2_i_ragest_male_va"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer incidence rate\n(2004-2008, Male, age variable)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v1_resl[["Lung_p2_i_ragest_male_v1"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer incidence rate\n(2004-2008, Male, set 1)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v2_resl[["Lung_p2_i_ragest_male_v2"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer incidence rate\n(2004-2008, Male, set 2)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v3_resl[["Lung_p2_i_ragest_male_v3"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer incidence rate\n(2004-2008, Male, set 3)', frame = FALSE),
+
+    tmap_satscan(covar_origin_10_fc, p_v0_resl[["Lung_p3_i_ragest_male_"]], area = TRUE) + 
+        tm_layout(title = 'Lung cancer incidence rate\n(2009-2013, Male, Uncontrolled)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_va_resl[["Lung_p3_i_ragest_male_va"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer incidence rate\n(2009-2013, Male, age variable)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v1_resl[["Lung_p3_i_ragest_male_v1"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer incidence rate\n(2009-2013, Male, set 1)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v2_resl[["Lung_p3_i_ragest_male_v2"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer incidence rate\n(2009-2013, Male, set 2)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v3_resl[["Lung_p3_i_ragest_male_v3"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer incidence rate\n(2009-2013, Male, set 3)', frame = FALSE),            
+    ncol=5)
+
+
+
+tmap::tmap_arrange(
+    tmap_satscan(covar_origin_00_fc, p_v0_resl[["Stomach_p1_i_ragest_male_"]], area = TRUE) + 
+        tm_layout(title = 'Stomach cancer incidence rate\n(1999-2003, Male, Uncontrolled)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_va_resl[["Stomach_p1_i_ragest_male_va"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(1999-2003, Male, age variable)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_v1_resl[["Stomach_p1_i_ragest_male_v1"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(1999-2003, Male, set 1)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_v2_resl[["Stomach_p1_i_ragest_male_v2"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(1999-2003, Male, set 2)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_v3_resl[["Stomach_p1_i_ragest_male_v3"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(1999-2003, Male, set 3)', frame = FALSE),
+
+    tmap_satscan(covar_origin_05_fc, p_v0_resl[["Stomach_p2_i_ragest_male_"]], area = TRUE) + 
+        tm_layout(title = 'Stomach cancer incidence rate\n(2004-2008, Male, Uncontrolled)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_va_resl[["Stomach_p2_i_ragest_male_va"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(2004-2008, Male, age variable)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v1_resl[["Stomach_p2_i_ragest_male_v1"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(2004-2008, Male, set 1)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v2_resl[["Stomach_p2_i_ragest_male_v2"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(2004-2008, Male, set 2)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v3_resl[["Stomach_p2_i_ragest_male_v3"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(2004-2008, Male, set 3)', frame = FALSE),
+
+    tmap_satscan(covar_origin_10_fc, p_v0_resl[["Stomach_p3_i_ragest_male_"]], area = TRUE) + 
+        tm_layout(title = 'Stomach cancer incidence rate\n(2009-2013, Male, Uncontrolled)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_va_resl[["Stomach_p3_i_ragest_male_va"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(2009-2013, Male, age variable)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v1_resl[["Stomach_p3_i_ragest_male_v1"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(2009-2013, Male, set 1)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v2_resl[["Stomach_p3_i_ragest_male_v2"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(2009-2013, Male, set 2)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v3_resl[["Stomach_p3_i_ragest_male_v3"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(2009-2013, Male, set 3)', frame = FALSE),            
+    ncol=5)
+
+
+
+
+tmap::tmap_arrange(
+    tmap_satscan(covar_origin_00_fc, p_v0_resl[["Stomach_p1_i_ragest_female_"]], area = TRUE) + 
+        tm_layout(title = 'Stomach cancer incidence rate\n(1999-2003, Female, Uncontrolled)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_va_resl[["Stomach_p1_i_ragest_female_va"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(1999-2003, Female, age variable)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_v1_resl[["Stomach_p1_i_ragest_female_v1"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(1999-2003, Female, set 1)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_v2_resl[["Stomach_p1_i_ragest_female_v2"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(1999-2003, Female, set 2)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_v3_resl[["Stomach_p1_i_ragest_female_v3"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(1999-2003, Female, set 3)', frame = FALSE),
+
+    tmap_satscan(covar_origin_05_fc, p_v0_resl[["Stomach_p2_i_ragest_female_"]], area = TRUE) + 
+        tm_layout(title = 'Stomach cancer incidence rate\n(2004-2008, Female, Uncontrolled)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_va_resl[["Stomach_p2_i_ragest_female_va"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(2004-2008, Female, age variable)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v1_resl[["Stomach_p2_i_ragest_female_v1"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(2004-2008, Female, set 1)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v2_resl[["Stomach_p2_i_ragest_female_v2"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(2004-2008, Female, set 2)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v3_resl[["Stomach_p2_i_ragest_female_v3"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(2004-2008, Female, set 3)', frame = FALSE),
+
+    tmap_satscan(covar_origin_10_fc, p_v0_resl[["Stomach_p3_i_ragest_female_"]], area = TRUE) + 
+        tm_layout(title = 'Stomach cancer incidence rate\n(2009-2013, Female, Uncontrolled)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_va_resl[["Stomach_p3_i_ragest_female_va"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(2009-2013, Female, age variable)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v1_resl[["Stomach_p3_i_ragest_female_v1"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(2009-2013, Female, set 1)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v2_resl[["Stomach_p3_i_ragest_female_v2"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(2009-2013, Female, set 2)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v3_resl[["Stomach_p3_i_ragest_female_v3"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer incidence rate\n(2009-2013, Female, set 3)', frame = FALSE),            
+    ncol=5)
+
+
+
+
+
+tmap::tmap_arrange(
+    tmap_satscan(covar_origin_00_fc, p_v0_resl[["Lung_p1_d_ragest_male_"]], area = TRUE) + 
+        tm_layout(title = 'Lung cancer mortality rate\n(1999-2003, Male, Uncontrolled)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_va_resl[["Lung_p1_d_ragest_male_va"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer mortality rate\n(1999-2003, Male, age variable)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_v1_resl[["Lung_p1_d_ragest_male_v1"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer mortality rate\n(1999-2003, Male, set 1)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_v2_resl[["Lung_p1_d_ragest_male_v2"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer mortality rate\n(1999-2003, Male, set 2)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_v3_resl[["Lung_p1_d_ragest_male_v3"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer mortality rate\n(1999-2003, Male, set 3)', frame = FALSE),
+
+    tmap_satscan(covar_origin_05_fc, p_v0_resl[["Lung_p2_d_ragest_male_"]], area = TRUE) + 
+        tm_layout(title = 'Lung cancer mortality rate\n(2004-2008, Male, Uncontrolled)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_va_resl[["Lung_p2_d_ragest_male_va"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer mortality rate\n(2004-2008, Male, age variable)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v1_resl[["Lung_p2_d_ragest_male_v1"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer mortality rate\n(2004-2008, Male, set 1)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v2_resl[["Lung_p2_d_ragest_male_v2"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer mortality rate\n(2004-2008, Male, set 2)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v3_resl[["Lung_p2_d_ragest_male_v3"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer mortality rate\n(2004-2008, Male, set 3)', frame = FALSE),
+
+    tmap_satscan(covar_origin_10_fc, p_v0_resl[["Lung_p3_d_ragest_male_"]], area = TRUE) + 
+        tm_layout(title = 'Lung cancer mortality rate\n(2009-2013, Male, Uncontrolled)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_va_resl[["Lung_p3_d_ragest_male_va"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer mortality rate\n(2009-2013, Male, age variable)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v1_resl[["Lung_p3_d_ragest_male_v1"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer mortality rate\n(2009-2013, Male, set 1)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v2_resl[["Lung_p3_d_ragest_male_v2"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer mortality rate\n(2009-2013, Male, set 2)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v3_resl[["Lung_p3_d_ragest_male_v3"]], area = TRUE) + 
+            tm_layout(title = 'Lung cancer mortality rate\n(2009-2013, Male, set 3)', frame = FALSE),            
+    ncol=5)
+
+
+
+tmap::tmap_arrange(
+    tmap_satscan(covar_origin_00_fc, p_v0_resl[["Stomach_p1_d_ragest_male_"]], area = TRUE) + 
+        tm_layout(title = 'Stomach cancer mortality rate\n(1999-2003, Male, Uncontrolled)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_va_resl[["Stomach_p1_d_ragest_male_va"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(1999-2003, Male, age variable)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_v1_resl[["Stomach_p1_d_ragest_male_v1"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(1999-2003, Male, set 1)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_v2_resl[["Stomach_p1_d_ragest_male_v2"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(1999-2003, Male, set 2)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_v3_resl[["Stomach_p1_d_ragest_male_v3"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(1999-2003, Male, set 3)', frame = FALSE),
+
+    tmap_satscan(covar_origin_05_fc, p_v0_resl[["Stomach_p2_d_ragest_male_"]], area = TRUE) + 
+        tm_layout(title = 'Stomach cancer mortality rate\n(2004-2008, Male, Uncontrolled)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_va_resl[["Stomach_p2_d_ragest_male_va"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(2004-2008, Male, age variable)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v1_resl[["Stomach_p2_d_ragest_male_v1"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(2004-2008, Male, set 1)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v2_resl[["Stomach_p2_d_ragest_male_v2"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(2004-2008, Male, set 2)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v3_resl[["Stomach_p2_d_ragest_male_v3"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(2004-2008, Male, set 3)', frame = FALSE),
+
+    tmap_satscan(covar_origin_10_fc, p_v0_resl[["Stomach_p3_d_ragest_male_"]], area = TRUE) + 
+        tm_layout(title = 'Stomach cancer mortality rate\n(2009-2013, Male, Uncontrolled)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_va_resl[["Stomach_p3_d_ragest_male_va"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(2009-2013, Male, age variable)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v1_resl[["Stomach_p3_d_ragest_male_v1"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(2009-2013, Male, set 1)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v2_resl[["Stomach_p3_d_ragest_male_v2"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(2009-2013, Male, set 2)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v3_resl[["Stomach_p3_d_ragest_male_v3"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(2009-2013, Male, set 3)', frame = FALSE),            
+    ncol=5)
+
+
+
+
+tmap::tmap_arrange(
+    tmap_satscan(covar_origin_00_fc, p_v0_resl[["Stomach_p1_d_ragest_female_"]], area = TRUE) + 
+        tm_layout(title = 'Stomach cancer mortality rate\n(1999-2003, Female, Uncontrolled)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_va_resl[["Stomach_p1_d_ragest_female_va"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(1999-2003, Female, age variable)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_v1_resl[["Stomach_p1_d_ragest_female_v1"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(1999-2003, Female, set 1)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_v2_resl[["Stomach_p1_d_ragest_female_v2"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(1999-2003, Female, set 2)', frame = FALSE),
+    tmap_satscan(covar_origin_00_fc, p_v3_resl[["Stomach_p1_d_ragest_female_v3"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(1999-2003, Female, set 3)', frame = FALSE),
+
+    tmap_satscan(covar_origin_05_fc, p_v0_resl[["Stomach_p2_d_ragest_female_"]], area = TRUE) + 
+        tm_layout(title = 'Stomach cancer mortality rate\n(2004-2008, Female, Uncontrolled)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_va_resl[["Stomach_p2_d_ragest_female_va"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(2004-2008, Female, age variable)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v1_resl[["Stomach_p2_d_ragest_female_v1"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(2004-2008, Female, set 1)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v2_resl[["Stomach_p2_d_ragest_female_v2"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(2004-2008, Female, set 2)', frame = FALSE),
+    tmap_satscan(covar_origin_05_fc, p_v3_resl[["Stomach_p2_d_ragest_female_v3"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(2004-2008, Female, set 3)', frame = FALSE),
+
+    tmap_satscan(covar_origin_10_fc, p_v0_resl[["Stomach_p3_d_ragest_female_"]], area = TRUE) + 
+        tm_layout(title = 'Stomach cancer mortality rate\n(2009-2013, Female, Uncontrolled)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_va_resl[["Stomach_p3_d_ragest_female_va"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(2009-2013, Female, age variable)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v1_resl[["Stomach_p3_d_ragest_female_v1"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(2009-2013, Female, set 1)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v2_resl[["Stomach_p3_d_ragest_female_v2"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(2009-2013, Female, set 2)', frame = FALSE),
+    tmap_satscan(covar_origin_10_fc, p_v3_resl[["Stomach_p3_d_ragest_female_v3"]], area = TRUE) + 
+            tm_layout(title = 'Stomach cancer mortality rate\n(2009-2013, Female, set 3)', frame = FALSE),            
+    ncol=5)
+
+
+```

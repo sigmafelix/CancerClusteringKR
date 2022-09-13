@@ -11,17 +11,17 @@ source("./Code/Base/base_functions.R")
 cldir = "/mnt/c/Users/sigma/"
 "%s%" = function(x, y) str_c(x, y)
 
-load(cldir %s% "OneDrive/NCC_Project/CancerClustering/Manuscript/Clustering_Base_sf_062422.RData")
+load(cldir %s% "OneDrive/NCC_Project/CancerClustering/Manuscript/Clustering_Base_sf_090322.RData")
 
-covar_origin_00_fcd = covar_origin_00_fc %>% bind_cols(as.data.frame(st_coordinates(st_centroid(.)))) %>%
+covar_origin_00_fcd = covar_origin_00_fc %>% bind_cols(as.data.frame(st_coordinates(st_centroid(., of_largest_polygon = TRUE)))) %>%
     filter(!grepl('^(23320|37430|39)', sgg_cd_c)) %>%
     st_drop_geometry %>%
     mutate(case_normal = 1, dummyyear = 2000)
-covar_origin_05_fcd = covar_origin_05_fc %>% bind_cols(as.data.frame(st_coordinates(st_centroid(.)))) %>%
+covar_origin_05_fcd = covar_origin_05_fc %>% bind_cols(as.data.frame(st_coordinates(st_centroid(., of_largest_polygon = TRUE)))) %>%
     filter(!grepl('^(23320|37430|39)', sgg_cd_c)) %>%
     st_drop_geometry %>%
     mutate(case_normal = 1, dummyyear = 2005)
-covar_origin_10_fcd = covar_origin_10_fc %>% bind_cols(as.data.frame(st_coordinates(st_centroid(.)))) %>%
+covar_origin_10_fcd = covar_origin_10_fc %>% bind_cols(as.data.frame(st_coordinates(st_centroid(., of_largest_polygon = TRUE)))) %>%
     filter(!grepl('^(23320|37430|39)', sgg_cd_c)) %>%
     st_drop_geometry %>%
     mutate(case_normal = 1, dummyyear = 2010)
@@ -34,9 +34,9 @@ dat1 = read_csv(cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_base_da
 dat2 = read_csv(cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_base_data_period2.csv")
 dat3 = read_csv(cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_base_data_period3.csv")
 
-# file.copy("/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/satscan_base_data_period1.csv", "/home/felix/Documents/satscan_base_data_period1.csv")
-# file.copy("/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/satscan_base_data_period2.csv", "/home/felix/Documents/satscan_base_data_period2.csv")
-# file.copy("/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/satscan_base_data_period3.csv", "/home/felix/Documents/satscan_base_data_period3.csv")
+# file.copy("/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/satscan_base_data_period1.csv", "/home/felix/Documents/satscan_base_data_period1.csv", overwrite = TRUE)
+# file.copy("/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/satscan_base_data_period2.csv", "/home/felix/Documents/satscan_base_data_period2.csv", overwrite = TRUE)
+# file.copy("/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/satscan_base_data_period3.csv", "/home/felix/Documents/satscan_base_data_period3.csv", overwrite = TRUE)
 
 
 dbase = cldir %s% "OneDrive/NCC_Project/CancerClustering/"
@@ -121,7 +121,7 @@ p3_all_df = Reduce(rbind, p3_all)
 
 p13_all_df = bind_rows(p1_all_df, p2_all_df) %>%
     bind_rows(p3_all_df)
-write_rds(p13_all_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_ASMR_uncontrolled_resid.rds")
+write_rds(p13_all_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_NPois_uncontrolled_resid.rds")
 
 
 
@@ -241,7 +241,7 @@ p3_all_v1_df = Reduce(rbind, p3_all_v1)
 
 p13_all_v1_df = bind_rows(p1_all_v1_df, p2_all_v1_df) %>%
     bind_rows(p3_all_v1_df)
-write_rds(p13_all_v1_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_ASMR_vset1_resid.rds")
+write_rds(p13_all_v1_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_NPois_vset1_resid.rds")
 
 
 ## VSet 2 ####
@@ -297,7 +297,7 @@ p3_all_v2_df = Reduce(rbind, p3_all_v2)
 
 p13_all_v2_df = bind_rows(p1_all_v2_df, p2_all_v2_df) %>%
     bind_rows(p3_all_v2_df)
-write_rds(p13_all_v2_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_ASMR_vset2_resid.rds")
+write_rds(p13_all_v2_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_NPois_vset2_resid.rds")
 
 
 ## VSet 3 ####
@@ -336,7 +336,7 @@ p3_all_v3 = mapply(function(x, y) {
 p3_all_v3_df = Reduce(rbind, p3_all_v3)
 
 p13_all_v3_df = bind_rows(p2_all_v3_df, p3_all_v3_df)
-write_rds(p13_all_v3_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_ASMR_vset3_resid.rds")
+write_rds(p13_all_v3_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_NPois_vset3_resid.rds")
 
 ## VSet 4 ####
 # run for the period 3 (normal) ####
@@ -355,5 +355,5 @@ p3_all_v4 = mapply(function(x, y) {
 }, all_models$basename[indx_p3], all_models$modeltitle[indx_p3], SIMPLIFY = FALSE)
 
 p3_all_v4_df = Reduce(rbind, p3_all_v4)
-write_rds(p3_all_v4_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_ASMR_vset4_resid.rds")
+write_rds(p3_all_v4_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_NPois_vset4_resid.rds")
 

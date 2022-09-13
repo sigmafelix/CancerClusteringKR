@@ -1,9 +1,10 @@
 ---
 author: "Insang Song"
-date: 08-11-2022
+date: 09-01-2022
 theme: "spacelab"
 format:
-  docx:
+  html:
+    self-contained: true
     toc: true
 ---
 
@@ -24,7 +25,7 @@ source('../Base/base_functions.R')
 options(repos = 'https://cran.seoul.go.kr')
 if (!require(pacman)) { install.packages('pacman') } 
 
-p_load(tidyverse, sf, tmap, readxl, kableExtra, patchwork, rmapshaper, spdep, mapsf, rmarkdown)
+p_load(tidyverse, sf, tmap, readxl, kableExtra, patchwork, rmapshaper, spdep, mapsf, rmarkdown, cowplot)
 
 username = 'sigma'
 basedir = sprintf('/mnt/c/Users/%s/', username)
@@ -110,7 +111,7 @@ age_pop_clean_agg = age_pop_clean %>%
     mutate(sex = plyr::mapvalues(sex, unique(sex), c('Male', 'Female')))
 
 
-load(str_c(drive, '/Manuscript/Clustering_Base_sf_062422.RData'))
+load(str_c(drive, '/Manuscript/Clustering_Base_sf_090322.RData'))
 
 # sgg_poly = covar_origin_10_fc %>%
 #     filter(!sgg_cd_c %in% c(23320, 37430) & !grepl('^(39)', sgg_cd_c)) %>%
@@ -129,13 +130,13 @@ load(str_c(drive, '/Manuscript/Clustering_Base_sf_062422.RData'))
 ## incidence and mortality check
 fc10 = covar_origin_10_fc %>%
     filter(!sgg_cd_c %in% c(23320, 37430) & !grepl('^(39)', sgg_cd_c)) %>%
-    ms_simplify(keep = 0.125, keep_shapes = TRUE)
+    ms_simplify(keep = 0.05, keep_shapes = TRUE)
 fc05 = covar_origin_05_fc %>%
     filter(!sgg_cd_c %in% c(23320, 37430) & !grepl('^(39)', sgg_cd_c)) %>%
-    ms_simplify(keep = 0.125, keep_shapes = TRUE)
+    ms_simplify(keep = 0.05, keep_shapes = TRUE)
 fc00 = covar_origin_00_fc %>%
     filter(!sgg_cd_c %in% c(23320, 37430) & !grepl('^(39)', sgg_cd_c)) %>%
-    ms_simplify(keep = 0.125, keep_shapes = TRUE)
+    ms_simplify(keep = 0.05, keep_shapes = TRUE)
 
 # fc10 = fc10 %>%
 #     mutate(across(matches("^n_*.*_(female)*.*"),
@@ -194,19 +195,19 @@ map_pop = function(sdf, col, brks = brks_incmor) {
     sdf_buul = sdf %>% filter(grepl('^(21|26)', sgg_cd_c))
     
     mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, lwd = 0.1)
-    mf_title(col, pos = "left", tab = TRUE, cex = 1.2, line = 1, inner=FALSE) 
+    #mf_title(col, pos = "left", tab = TRUE, cex = 1.2, line = 1, inner=FALSE) 
     mf_inset_on(x = sdf_selin, pos = "topright", cex = .28)
     # display the target municipality
     mf_init(sdf_selin)
     mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, leg_pos = NA, lwd = 0.1, add = TRUE)
-    mf_title("Seoul-Incheon", pos = "left", tab = TRUE, cex = .9, line = 1, inner = TRUE)
+    mf_title("Seoul-Incheon", pos = "left", tab = TRUE, cex = .9, line = 1, bg = 'white', fg = 'black', inner = TRUE)
     # close the inset
     mf_inset_off()
     mf_inset_on(x = sdf_buul, pos = "bottomright", cex = .2)
     # display the target municipality
     mf_init(sdf_buul)
     mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, leg_pos=NA, lwd = 0.1, add = TRUE)
-    mf_title("Busan-Ulsan", pos = "left", tab = TRUE, cex = .9, line = 1, inner = TRUE)
+    mf_title("Busan-Ulsan", pos = "left", tab = TRUE, cex = .9, line = 1, bg = 'white', fg = 'black', inner = TRUE)
     # close the inset
     mf_inset_off()
 
@@ -243,7 +244,7 @@ map_pop_sel = function(sdf, col, brks = brks_incmor) {
 
 
 
-map_pop_control = function(sdf, col, brks = NULL) {
+map_pop_control = function(sdf, col, brks = NULL, title = NULL) {
     sdf_selin = sdf %>% filter(grepl('^(11|23)', sgg_cd_c))
     sdf_buul = sdf %>% filter(grepl('^(21|26)', sgg_cd_c))
     #par(mar=c(0,-4,0.33,0.33))
@@ -256,25 +257,88 @@ map_pop_control = function(sdf, col, brks = NULL) {
                                 str_c("Crude ", varname, " rate (", titletext_suffix, periodname, ")"), str_c("Cases of ", varname, " (", titletext_suffix, periodname, ")")))
 
     if (is.null(brks)) {
-        mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, lwd = 0.1)
+        mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, lwd = 0.1, leg_title_cex = 1.2, leg_val_cex = 1.2)
     } else {
-        mapsf::mf_choro(sdf, var = col, breaks = brks, lwd = 0.1)
+        mapsf::mf_choro(sdf, var = col, breaks = brks, lwd = 0.1, leg_title_cex = 1.2, leg_val_cex = 1.2)
     }
-    mf_title(titletext, pos = "left", tab = TRUE, cex = 1.2, line = 1, inner=FALSE) 
+    mf_title(title, pos = "left", tab = TRUE, cex = 1.5, line = 1, inner=FALSE, fg = 'black', bg = 'white') 
     mf_inset_on(x = sdf_selin, pos = "topright", cex = .28)
     # display the target municipality
     mf_init(sdf_selin)
     mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, leg_pos = NA, lwd = 0.1, add = TRUE)
-    mf_title("Seoul-Incheon", pos = "left", tab = TRUE, cex = .9, line = 1, inner = TRUE)
+    mf_title("Seoul-Incheon", pos = "left", tab = TRUE, cex = .9, line = 1, bg = 'white', fg = 'black', inner = TRUE)
     # close the inset
     mf_inset_off()
     mf_inset_on(x = sdf_buul, pos = "bottomright", cex = .2)
     # display the target municipality
     mf_init(sdf_buul)
     mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, leg_pos=NA, lwd = 0.1, add = TRUE)
-    mf_title("Busan-Ulsan", pos = "left", tab = TRUE, cex = .9, line = 1, inner = TRUE)
+    mf_title("Busan-Ulsan", pos = "left", tab = TRUE, cex = .9, line = 1, bg = 'white', fg = 'black', inner = TRUE)
     # close the inset
     mf_inset_off()
+
+}
+
+
+tmap_pop_control = function(sdf, col, brks = NULL, title = NULL, leg_label = NULL) {
+    sdf_selin = sdf %>% filter(grepl('^(11|23)', sgg_cd_c))
+    sdf_buul = sdf %>% filter(grepl('^(21|26)', sgg_cd_c))
+    #par(mar=c(0,-4,0.33,0.33))
+    titletext_suffix = tolower(str_replace_all(str_extract(col, "(Stomach|Lung)_*.*male"), "_", ", "))
+    periodname = str_c(", period ", str_extract(col, "\\d"))
+    varname = ifelse(grepl("_i_", col), "incidence", 'mortality')
+    titletext = ifelse(grepl('ragest', col), 
+                            str_c("Age standardized ", varname, " rate (", titletext_suffix,  periodname, ")"),
+                            ifelse(grepl('rcrude', col),
+                                str_c("Crude ", varname, " rate (", titletext_suffix, periodname, ")"), str_c("Cases of ", varname, " (", titletext_suffix, periodname, ")")))
+
+    if (is.null(brks)) {
+        sdf_tbase = 
+        tm_shape(sdf) +
+            tm_fill(col, breaks = 'quantile', nbreaks = 5, palette = 'YlOrRd') +
+            tm_borders('dark grey', lwd = 0.1) +
+            tm_layout(legend.title.size = 1.25,
+                      legend.text.size = 1.2,
+                      frame = FALSE)
+        
+        sdf_inset_selin = 
+            tm_shape(sdf_selin, bbox = st_bbox(sdf_selin)) +
+            tm_fill(col, breaks = 'quantile', nbreaks = 5, palette = 'YlOrRd', legend.show = FALSE) +
+            tm_borders('dark grey', lwd = 0.1) +
+            tm_layout(title = 'Seoul-Incheon')
+
+        sdf_inset_buul = 
+            tm_shape(sdf_buul, bbox = st_bbox(sdf_buul)) +
+            tm_fill(col, breaks = 'quantile', nbreaks = 5, palette = 'YlOrRd', legend.show = FALSE) +
+            tm_borders('dark grey', lwd = 0.1) +
+            tm_layout(title = 'Busan-Ulsan')
+        # mapsf::mf_choro(sdf, var = col, breaks = 'quantile', nbreaks = 5, lwd = 0.1, leg_title_cex = 1.2, leg_val_cex = 1.2)
+    } else {
+        sdf_tbase = 
+        tm_shape(sdf) +
+            tm_fill(col, breaks = brks, labels = leg_label, palette = 'YlOrRd') +
+            tm_borders('dark grey', lwd = 0.1) +
+            tm_layout(legend.title.size = 1.25,
+                      legend.text.size = 1.2,
+                      frame = FALSE)
+        sdf_inset_selin = 
+            tm_shape(sdf_selin, bbox = st_bbox(sdf_selin)) +
+            tm_fill(col, breaks = brks, labels = leg_label, palette = 'YlOrRd', legend.show = FALSE) +
+            tm_borders('dark grey', lwd = 0.1) +
+            tm_layout(title = 'Seoul-Incheon')
+        sdf_inset_buul = 
+            tm_shape(sdf_buul, bbox = st_bbox(sdf_buul)) +
+            tm_fill(col, breaks = brks, labels = leg_label, palette = 'YlOrRd', legend.show = FALSE) +
+            tm_borders('dark grey', lwd = 0.1) +
+            tm_layout(title = 'Busan-Ulsan')
+        # mapsf::mf_choro(sdf, var = col, breaks = brks, lwd = 0.1, leg_title_cex = 1.2, leg_val_cex = 1.2)
+    }
+
+    ggdraw() +
+        draw_plot(tmap_grob(sdf_tbase)) +
+        draw_plot(tmap_grob(sdf_inset_selin), x = 0.7, y = 0.99, height = 0.28) +
+        draw_plot(tmap_grob(sdf_inset_buul), x = 0.76, y = 0.22, height = 0.2)
+
 
 }
 
@@ -347,13 +411,21 @@ fc0010_crr = fc00_crr %>%
     left_join(fc05_crr %>% st_drop_geometry) %>%
     left_join(fc10_crr %>% st_drop_geometry) %>%
     dplyr::select(order(colnames(.)))
+
+
+leg_len = length(colnames(fc0010_ncc)[-grep('(sgg_cd_c|geom)', colnames(fc0010_ncc))])
+leg_enum = str_c("(", letters[seq_len(leg_len)], ")")
+brkslab_incmor = c("[0, 50)", "[50, 100)", "[100, 250)", "[250, 500)", "[500, 1000)", "1000<=")
+
 ```
 
 ```{r sgg plot (cases), echo=F, fig.width=7.2, fig.height=6}
-
-for (i in colnames(fc0010_ncc)[-grep('(sgg_cd_c|geom)', colnames(fc0010_ncc))]) {
-    map_pop_control(fc0010_ncc, i, brks_incmor)
+cns_ncc = colnames(fc0010_ncc)[-grep('(sgg_cd_c|geom)', colnames(fc0010_ncc))]
+for (i in seq_len(length(cns_ncc))) {
+    tmap_pop_control(fc0010_ncc, cns_ncc[i], brks_incmor, title = leg_enum[i], leg_label = brkslab_incmor)
 }
+
+tmap_pop_control(fc0010_ncc, cns_ncc[16], brks_incmor, title = leg_enum[16], leg_label = brkslab_incmor)
 ```
 
 
@@ -361,21 +433,23 @@ for (i in colnames(fc0010_ncc)[-grep('(sgg_cd_c|geom)', colnames(fc0010_ncc))]) 
 # Crude
 ```{r sgg plot (crude), echo=F, fig.width=7.2, fig.height=6}
 #| layout-ncol: 3
-for (i in colnames(fc0010_crr)[-grep('(sgg_cd_c|geom)', colnames(fc0010_crr))]) {
-    map_pop_control(fc0010_crr, i)
+cns_crr = colnames(fc0010_crr)[-grep('(sgg_cd_c|geom)', colnames(fc0010_crr))]
+for (i in seq_len(length(cns_crr))) {
+    tmap_pop_control(fc0010_crr, cns_crr[i], title = leg_enum[i])
 }
 ```
 
 # Age standardized
 ```{r sgg plot (asr), echo=F, fig.width=7.2, fig.height=6}
 #| layout-ncol: 3
-for (i in colnames(fc0010_asr)[-grep('(sgg_cd_c|geom)', colnames(fc0010_asr))]) {
-    map_pop_control(fc0010_asr, i)
+cns_asr = colnames(fc0010_asr)[-grep('(sgg_cd_c|geom)', colnames(fc0010_asr))]
+for (i in seq_len(length(cns_asr))) {
+    tmap_pop_control(fc0010_asr, cns_asr[i], title = leg_enum[i])
 }
 ```
 
 
-```{r sgg sma, echo = F, fig.width=7.2, fig.height=6}
+```{r sgg sma, echo = F, fig.width=7.2, fig.height=6, eval=FALSE}
 
 map_pop_ex = function(sdf, col, sdf_in, brks = NULL) {
     sdf_selin = sdf %>% filter(grepl('^(11|23)', sgg_cd_c))

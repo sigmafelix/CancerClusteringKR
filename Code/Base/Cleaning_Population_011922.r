@@ -7,6 +7,7 @@ if (!require(pacman)) {
 p_load(tidyverse, sf, DCluster, tmap, smerc, knitr, readxl, kableExtra, DClusterm, patchwork)
 p_load(stars, raster, starsExtra, here, stargazer)
 
+username = 'sigma'
 basedir = sprintf('/mnt/c/Users/%s/', username)
 rdatafiles = list.files(path = str_c(basedir, 'Documents/GP/'), pattern = '*.RData', full.names = TRUE)
 geopath = str_c(basedir, "OneDrive/Data/Korea/")
@@ -19,11 +20,12 @@ dbdir = drive  # here::here()
 
 # incidence
 inc <- read.csv(paste(drive, "cancerInc_sgg.csv", sep = ""), fileEncoding = "EUC-KR")
+# mortality
 mor_to <- read.csv(paste(drive, "cancerMor_sgg_total.csv", sep = ""), fileEncoding = "EUC-KR")
 mor_me <- read.csv(paste(drive, "cancerMor_sgg_male.csv", sep = ""), fileEncoding = "EUC-KR")
 mor_fe <- read.csv(paste(drive, "cancerMor_sgg_female.csv", sep = ""), fileEncoding = "EUC-KR")
 
-conv_table = read.csv(paste(dbdir, 'SGG_before_2022_Conversion_Table_220122_CConly.csv', sep = ''), fileEncoding = 'EUC-KR')
+conv_table = read.csv(paste(drivebase, 'SGG_before_2022_Conversion_Table_220122_CConly.csv', sep = ''), fileEncoding = 'EUC-KR')
 # total population for the expected values
 # sex code: 0(all), 1(male), 2(female)
 pop <- read.csv(paste(drivepop, "Midyear_Population_1998_2019.csv", sep = ""), fileEncoding = "UTF-8") %>%
@@ -31,7 +33,8 @@ pop <- read.csv(paste(drivepop, "Midyear_Population_1998_2019.csv", sep = ""), f
         sex0 = plyr::mapvalues(sex0, c(0, 1, 2), c("T", "M", "F")),
         sex_e = plyr::mapvalues(sex0, c("T", "M", "F"), c("total", "male", "female")),
         population = as.numeric(population)
-    )
+    ) %>%
+    filter()
 pop_wide = pop %>%
     pivot_wider(names_from = c("sex0", "year"), values_from = population)
 
@@ -46,16 +49,68 @@ colnames(mor_fe) <- c("cause0", "cause", "sgg_cd", "sgg_nm", "sex0", "sex", "typ
 #sgg2010 <- sgg %>%
 #    filter(BASE_YEAR == 2010)
 
+# sgg mort, pop, and inc data filtering using a conversion table and the spatial dataset
+#' Consolidate sgg data per year
+#' 
+#' @param table_target long data.frame object to be cleaned that should include year and sgg_cd
+#' @param sp_data sf object to be referred to select the relevant (or prioritized) sgg code
+#' @param table_conv data.frame object including from_year, to_year, fromcode, and tocode.
+#' @param year the target year. integer.
+consolidate_sgg = function(table_target, sp_data = NULL, table_conv, year = NULL) {
+    # flow
+    # using table_target,
+    # sp_data: 
+    table_target_l = table_target %>%
+        split(., .$year) %>%
+        lapply(function(d) {
+            dx = d
+            year_u = unique(dx$year)
+            if (is.numeric(year_u)) {
+                tconv = table_conv %>%
+                    filter(from_year <= year_u & to_year >= year_u)
+            } else {
+                year_us = str_extract_all(year_u, '\\d{4,4}')
+                year_u1 = as.integer(year_us[[1]][1])
+                year_u2 = as.integer(year_us[[1]][2])
+                tconv = table_conv %>%
+                    filter((from_year <= year_u1 & to_year >= year_u1) | (from_year <= year_u2 & to_year >= year_u2))
+            }
+            # print(tconv)
+            for (k in seq_len(nrow(tconv))) {
+                tconv_c = tconv[k,]
+                tconv_fcode = tconv_c$fromcode
+                tconv_tcode = tconv_c$tocode
+
+                dsgg_codes = unique(dx$sgg_cd)
+                if (sum(dsgg_codes %in% c(tconv_fcode, tconv_tcode)) >= 2) {
+                    dx = dx %>%
+                        filter(sgg_cd != tconv_fcode)
+                } else {
+                    dx = dx
+                }
+            }
+            return(dx)
+        })
+    table_target_ldf = table_target_l %>%
+        do.call(rbind, .)
+    return(table_target_ldf)
+}
+
+# ttl = consolidate_sgg(inc, table_conv = conv_table_e)
+# ttm = consolidate_sgg(mor_to, table_conv = conv_table_e)
+# ttp = consolidate_sgg(pop, table_conv = conv_table_e)
+
 # pop: no sgg conversion
 # inc : join with pop, then convert sgg code and group_by(sgg_cd_c) and take weighted mean for rates
 # mort: join with pop, split N and rates; group_by(sgg_cd, year_agg) then N(sum), rates(mean) pop(sum); 
 #       convert sgg code and group_by(sgg_cd_c) and take sum(N) and weighted mean for rates
 conv_table_e = conv_table %>%
     filter(to_year >= 1999 & from_year <= 2013) %>%
-    dplyr::select(fromcode, tocode)
+    dplyr::select(from_year, to_year, fromcode, tocode)
 
 pop_cl = pop %>%
     filter(year >= 1999 & year <= 2013) %>%
+    consolidate_sgg(., table_conv = conv_table_e) %>%
     mutate(#sgg_cd = plyr::mapvalues(sgg_cd, conv_table_e$fromcode, conv_table_e$tocode),
            year_agg = cut(year, breaks = c(1998,2003,2008,2013), labels = c('1999-2003', '2004-2008', '2009-2013'), right = TRUE)) %>%
     group_by(year_agg, sgg_cd, sex0, sex_e) %>%
@@ -71,7 +126,8 @@ inc_clo <- inc %>%
         sex_e = plyr::mapvalues(sex, unique(sex), c("total", "male", "female")),
         type_inc_e = plyr::mapvalues(type_inc, unique(type_inc), c("n", "r_crude", "r_agest"))
     ) %>%
-    filter(cancer_type_e %in% c('Stomach', 'Lung'))
+    filter(cancer_type_e %in% c('Stomach', 'Lung')) %>%
+    consolidate_sgg(., table_conv = conv_table_e)
 
 inc_cln = inc_clo %>%
     filter(type_inc_e == 'n') %>%
@@ -123,7 +179,8 @@ mor_clo = bind_rows(mor_to, mor_me) %>%
            sex_e = plyr::mapvalues(sex, unique(sex), c('total', 'male', 'female')),
            type_mor_e = plyr::mapvalues(type0, c('T1', 'T4', 'T7'), c('n', 'r_crude', 'r_agest'))
         )  %>%
-    filter(cancer_type_e %in% c('Stomach', 'Lung'))
+    filter(cancer_type_e %in% c('Stomach', 'Lung')) %>%
+    consolidate_sgg(., table_conv = conv_table_e)
 
 mor_cln = mor_clo %>%
     filter(type_mor_e == "n") %>%

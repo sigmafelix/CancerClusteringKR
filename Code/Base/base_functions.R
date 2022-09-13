@@ -845,11 +845,11 @@ MultipleCoordinatesType=0
 
 [Spatial Window]
 ;maximum spatial size in population at risk (<=50%)
-MaxSpatialSizeInPopulationAtRisk=35
+MaxSpatialSizeInPopulationAtRisk=50
 ;restrict maximum spatial size - max circle file? (y/n)
 UseMaxCirclePopulationFileOption=n
 ;maximum spatial size in max circle population file (<=50%)
-MaxSpatialSizeInMaxCirclePopulationFile=35
+MaxSpatialSizeInMaxCirclePopulationFile=50
 ;maximum circle size filename
 MaxCirclePopulationFile=
 ;restrict maximum spatial size - distance? (y/n)
@@ -998,11 +998,11 @@ ThresholdLocationsSeparateKML=1000
 ;report hierarchical clusters (y/n)
 ReportHierarchicalClusters=y
 ;criteria for reporting secondary clusters(0=NoGeoOverlap, 1=NoCentersInOther, 2=NoCentersInMostLikely,  3=NoCentersInLessLikely, 4=NoPairsCentersEachOther, 5=NoRestrictions)
-CriteriaForReportingSecondaryClusters=1
+CriteriaForReportingSecondaryClusters=0
 ;report gini clusters (y/n)
 ReportGiniClusters=n
 ;gini index cluster reporting type (0=optimal index only, 1=all values)
-GiniIndexClusterReportingType=0
+GiniIndexClusterReportingType=1
 ;spatial window maxima stops (comma separated decimal values[<=50%] )
 SpatialMaxima=5,10,12,15,20,25,30,33,35
 ;max p-value for clusters used in calculation of index based coefficients (0.000-1.000)
@@ -1263,9 +1263,25 @@ tmap_smerc = function(basemap, smc, threshold = 2, significance = 0.01, alpha = 
 }
 
 ## Plot SaTScan results directly
-tmap_satscan = function(basemap, sats, threshold = 2, significance = 0.01, alpha = 0.4, return_ellipses = TRUE, gini = FALSE) {
-    rotate = function(a) {a = a*pi/180; matrix(c(cos(a), sin(a), -sin(a), cos(a)), 2, 2)}
+tmap_satscan = function(basemap, sats, threshold = 2, significance = 0.01, alpha = 0.4, return_ellipses = TRUE, gini = FALSE, area = FALSE) {
     
+    # Utility functions
+    rotate = function(a) {a = a*pi/180; matrix(c(cos(a), sin(a), -sin(a), cos(a)), 2, 2)}
+    satscanres_to_sf = function(ssres) {
+        cntr = st_geometry(st_point(c(ssres$x, ssres$y)))
+        ell = (nngeo::st_ellipse(pnt = cntr,
+                                 ex = ssres$minor,
+                                 ey = ssres$major,
+                                 res = 80) - cntr) * rotate(ssres$angle) + cntr
+        ell = ell %>%
+              st_sf %>%
+              mutate(
+                     RR = ssres$LLR,
+                     statistic = ssres$stat_test,
+                     p_value = ssres$pvalue)
+        return(ell)        
+    }
+
     library(tmap)
     basemap$cluster = NA
 
@@ -1287,52 +1303,65 @@ tmap_satscan = function(basemap, sats, threshold = 2, significance = 0.01, alpha
     nclust = nrow(sats)
     smc_shps = vector('list', length = length(sats$pvalue))
     # loop through
+    if (area) {
+    
     if (return_ellipses) {
+        smc_shps = 
+        sats[1,] %>%
+            split(., .$cluster) %>%
+            lapply(function(x) {
+                    ellps = satscanres_to_sf(x)
+                    st_crs(ellps) = st_crs(basemap)
+                    ellps_prime = ellps[1,]
+                    centrds = st_centroid(basemap, of_largest_polygon = TRUE)
+                    basemap_cls = basemap %>%
+                        mutate(prim_cluster = as.factor(as.vector(st_intersects(centrds, ellps_prime, sparse = F))))
+                    return(basemap_cls)
+            })
+        nclust = 1
+        }
+    } else {
         smc_shps = 
         sats %>%
             split(., .$cluster) %>%
             lapply(function(x) {
-                cntr = st_geometry(st_point(c(x$x, x$y)))
-                ell = (nngeo::st_ellipse(pnt = cntr,
-                                  ex = x$minor,
-                                  ey = x$major,
-                                  res = 80) - cntr) * rotate(x$angle) + cntr
-                ell = ell %>%
-                    st_sf %>%
-                    mutate(
-                           RR = x$LLR,
-                           statistic = x$stat_test,
-                           p_value = x$pvalue)
-                return(ell)})
-        smc_shps = do.call(rbind, smc_shps) %>%
+                    satscanres_to_sf(x)
+                })
+    }
+    smc_shps = do.call(rbind, smc_shps) %>%
             mutate(cluster = seq_len(nclust),
                    class_cl = c('#C41B4050', rep(NA, nrow(.)-1))) #'#D980AF'
-        st_crs(smc_shps) = st_crs(basemap)
+    st_crs(smc_shps) = st_crs(basemap)
+
+        #return(smc_shps)
         #smc_shps = st_transform(smc_shps, st_crs(basemap))
         # mf_init(x = basemap)
         # mf_map(basemap, add = TRUE)
         # mf_map(smc_shps, type = 'typo', var = 'class_cl', leg_title = 'Primary', leg_pos = NA, alpha = 0.5,add = TRUE)
-        
-        if (nrow(smc_shps) == 1) {
-            tm_cluster = tm_shape(basemap) +
+        if (area) {
+            tm_cluster = tm_shape(smc_shps) +
+                tm_borders(col = 'dark grey', lwd = 0.5) +
+                tm_fill('prim_cluster', pal = c('white', '#e9592d'), colorNA = 'transparent', showNA = FALSE, legend.show = FALSE) 
+        } else {
+            if (nrow(smc_shps) == 1) {
+                tm_cluster = tm_shape(basemap) +
+                        tm_borders(col = 'dark grey', lwd = 0.8) +
+                        tm_shape(smc_shps[1,]) +
+                        tm_borders('#FF0000', lwd = 1.2) +
+                        tm_fill('class_cl', colorNA = 'transparent', showNA = FALSE)
+            } else {
+                tm_cluster = tm_shape(basemap) +
                     tm_borders(col = 'dark grey', lwd = 0.8) +
+                    tm_shape(smc_shps[-1,]) +
+                    tm_borders("#F200AA") +
                     tm_shape(smc_shps[1,]) +
                     tm_borders('#FF0000', lwd = 1.2) +
                     tm_fill('class_cl', colorNA = 'transparent', showNA = FALSE)
-        } else {
-            tm_cluster = tm_shape(basemap) +
-                tm_borders(col = 'dark grey', lwd = 0.8) +
-                tm_shape(smc_shps[-1,]) +
-                tm_borders("#F200AA") +
-                tm_shape(smc_shps[1,]) +
-                tm_borders('#FF0000', lwd = 1.2) +
-                tm_fill('class_cl', colorNA = 'transparent', showNA = FALSE)
+            }
         }
-    }
-
     # tmap
     return(tm_cluster)
-}
+    }
 
 
 

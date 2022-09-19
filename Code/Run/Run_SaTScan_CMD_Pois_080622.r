@@ -11,7 +11,7 @@ source("./Code/Base/base_functions.R")
 cldir = "/mnt/c/Users/sigma/"
 "%s%" = function(x, y) str_c(x, y)
 
-load(cldir %s% "OneDrive/NCC_Project/CancerClustering/Manuscript/Clustering_Base_sf_090322.RData")
+load(cldir %s% "OneDrive/NCC_Project/CancerClustering/Manuscript/Clustering_Base_sf_091522.RData")
 
 covar_origin_00_fcd = covar_origin_00_fc %>% bind_cols(as.data.frame(st_coordinates(st_centroid(., of_largest_polygon = TRUE)))) %>%
     filter(!grepl('^(23320|37430|39)', sgg_cd_c)) %>%

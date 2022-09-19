@@ -83,7 +83,7 @@ rdsdir = drive#sprintf("/mnt/c/Users/%s/OneDrive/NCC_Project/CancerClustering/",
 
 
 ```{r}
-load(str_c(drive, '/Manuscript/Clustering_Base_sf_062422.RData'))
+load(str_c(drive, '/Manuscript/Clustering_Base_sf_090322.RData'))
 
 covar_origin_10_fc = covar_origin_10_fc %>%
     filter(!sgg_cd_c %in% c(23320, 37430, 39010, 39020)) %>%

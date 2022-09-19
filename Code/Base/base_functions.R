@@ -1000,13 +1000,13 @@ ReportHierarchicalClusters=y
 ;criteria for reporting secondary clusters(0=NoGeoOverlap, 1=NoCentersInOther, 2=NoCentersInMostLikely,  3=NoCentersInLessLikely, 4=NoPairsCentersEachOther, 5=NoRestrictions)
 CriteriaForReportingSecondaryClusters=0
 ;report gini clusters (y/n)
-ReportGiniClusters=n
+ReportGiniClusters=y
 ;gini index cluster reporting type (0=optimal index only, 1=all values)
-GiniIndexClusterReportingType=1
+GiniIndexClusterReportingType=0
 ;spatial window maxima stops (comma separated decimal values[<=50%] )
 SpatialMaxima=5,10,12,15,20,25,30,33,35
 ;max p-value for clusters used in calculation of index based coefficients (0.000-1.000)
-GiniIndexClustersPValueCutOff=0.05
+GiniIndexClustersPValueCutOff=0.01
 ;report gini index coefficents to results file (y/n)
 ReportGiniIndexCoefficents=n
 ;restrict reported clusters to maximum geographical cluster size? (y/n)
@@ -1042,7 +1042,7 @@ ClusterSignificanceRecurrenceCutoffType=4
 ;cluster significance by  p-value (y/n)
 ClusterSignificanceByPvalue=n
 ;cluster significance p-value cutoff (0.000-1.000)
-ClusterSignificancePvalueCutoff=0.05
+ClusterSignificancePvalueCutoff=0.01
 ;report critical values for .01 and .05? (y/n)
 CriticalValue=n
 ;report cluster rank (y/n)
@@ -1088,7 +1088,7 @@ SimulatedDataOutputFilename=
 
 [Run Options]
 ;number of parallel processes to execute (0=All Processors, x=At Most X Processors)
-NumberParallelProcesses=12
+NumberParallelProcesses=8
 ;suppressing warnings? (y/n)
 SuppressWarnings=n
 ;log analysis run to history file? (y/n)
@@ -1363,6 +1363,86 @@ tmap_satscan = function(basemap, sats, threshold = 2, significance = 0.01, alpha
     return(tm_cluster)
     }
 
+## Return SaTScan results in a data.frame
+df_satscan_primary = function(basemap, sats, threshold = 2, significance = 0.01, alpha = 0.4, return_ellipses = TRUE, gini = FALSE, area = FALSE) {
+    
+    # Utility functions
+    rotate = function(a) {a = a*pi/180; matrix(c(cos(a), sin(a), -sin(a), cos(a)), 2, 2)}
+    satscanres_to_sf = function(ssres) {
+        cntr = st_geometry(st_point(c(ssres$x, ssres$y)))
+        ell = (nngeo::st_ellipse(pnt = cntr,
+                                 ex = ssres$minor,
+                                 ey = ssres$major,
+                                 res = 80) - cntr) * rotate(ssres$angle) + cntr
+        ell = ell %>%
+              st_sf %>%
+              mutate(
+                     RR = ssres$LLR,
+                     statistic = ssres$stat_test,
+                     p_value = ssres$pvalue)
+        return(ell)        
+    }
+
+    basemap$cluster = NA
+
+    basemap_null = basemap %>%
+        mutate(cluster = -999, prim_cluster = -999, class_cl = -999, analysis_title = unique(sats$analysis_title))
+    if (is.null(sats)) {
+        return(basemap_null)
+    } else if (gini & sum(sats$GINI) == 0) {
+        return(basemap_null)
+    }
+
+    if (gini) {
+        sats = sats %>% filter(GINI)
+    }
+    # test if the angle was weirdly reflected
+    sats = sats %>% mutate(angle = if_else(angle < 0, angle + 360, angle))
+    nclust = nrow(sats)
+    smc_shps = vector('list', length = length(sats$pvalue))
+    # loop through
+    if (area) {
+    
+    if (return_ellipses) {
+        smc_shps = 
+        sats[1,] %>%
+            split(., .$cluster) %>%
+            lapply(function(x) {
+                    ellps = satscanres_to_sf(x)
+                    st_crs(ellps) = st_crs(basemap)
+                    ellps_prime = ellps[1,]
+                    centrds = st_centroid(basemap, of_largest_polygon = TRUE)
+                    basemap_cls = basemap %>%
+                        mutate(prim_cluster = as.factor(as.vector(st_intersects(centrds, ellps_prime, sparse = F))))
+                    return(basemap_cls)
+            })
+        nclust = 1
+        }
+    } else {
+        smc_shps = 
+        sats %>%
+            split(., .$cluster) %>%
+            lapply(function(x) {
+                    satscanres_to_sf(x)
+                })
+    }
+    smc_shps = do.call(rbind, smc_shps) %>%
+            mutate(cluster = seq_len(nclust),
+                   class_cl = c('#C41B4050', rep(NA, nrow(.)-1))) %>% #'#D980AF'
+            mutate(analysis_title = unique(sats$analysis_title))
+    st_crs(smc_shps) = st_crs(basemap)
+
+        #return(smc_shps)
+        #smc_shps = st_transform(smc_shps, st_crs(basemap))
+        # mf_init(x = basemap)
+        # mf_map(basemap, add = TRUE)
+        # mf_map(smc_shps, type = 'typo', var = 'class_cl', leg_title = 'Primary', leg_pos = NA, alpha = 0.5,add = TRUE)
+    if (area) {
+        tm_cluster = smc_shps
+    }
+    # tmap
+    return(tm_cluster)
+}
 
 
 # Run dclustm analysis
@@ -1453,7 +1533,9 @@ tmap_dclust = function(basemap, dclust, threshold = 2, upto_n = NULL, alpha = 0.
 
 
 ## LISA mapping
-map_lisa = function(map, lisa.var, vset = NULL, degree.s = 1, signif = 0.05, title = "", special_label = TRUE, adjust = FALSE, for_residuals = TRUE) {
+map_lisa = function(map, lisa.var, vset = NULL, degree.s = 1, signif = 0.05, title = "", 
+                    special_label = TRUE, adjust = FALSE, for_residuals = TRUE,
+                    return_sf = FALSE) {
 
     if (adjust) {
         sex_t = str_extract(lisa.var, "(male|female|total)")
@@ -1515,10 +1597,18 @@ map_lisa = function(map, lisa.var, vset = NULL, degree.s = 1, signif = 0.05, tit
     map_lisa$LISA = factor(quadrant, levels = vals_real)
     
     maptitle = str_c(title)
-    map_result = tm_shape(map_lisa) +
-        tm_fill("LISA", style = 'cat', palette = pal_fin, colorNA = 'transparent', textNA = "Insignificant") +
-        tm_borders('grey', lwd = 0.66) +
-        tm_layout(frame = FALSE, title = maptitle)
-    map_result
+    
+    if (return_sf) {
+        map_lisa_e = map_lisa %>%
+            mutate(analysis_title = lisa.var)
+        st_crs(map_lisa_e) = st_crs(map)
+        return(map_lisa_e)
+    } else {
+        map_result = tm_shape(map_lisa) +
+            tm_fill("LISA", style = 'cat', palette = pal_fin, colorNA = 'transparent', textNA = "Insignificant") +
+            tm_borders('grey', lwd = 0.66) +
+            tm_layout(frame = FALSE, title = maptitle)
+        map_result
+    }
  
 }

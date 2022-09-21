@@ -445,11 +445,11 @@ inc_clwcrr = inc_cl %>%
 
 
 ## Population (5-year aggregation)
-pop_clw = pop_cl %>%
+pop_clw = pop_cla %>%
     mutate(sex_e = tolower(sex_e),
            period = plyr::mapvalues(year_agg, unique(year_agg), seq_len(length(unique(year_agg))))) %>%
-    dplyr::select(-sex0, -year_agg) %>%
-    filter(period %in% 1:3) %>%
+    dplyr::select(-year_agg) %>%
+    #filter(period %in% 1:3) %>%
     pivot_wider(names_from = c(sex_e, period),
                 names_sep = "_",
                 names_prefix = 'n_p_',
@@ -457,8 +457,8 @@ pop_clw = pop_cl %>%
     dplyr::select(-ends_with('_NA')) %>% ## this point was the last point
     mutate(sgg_cd_c = plyr::mapvalues(sgg_cd, conv_table_e$fromcode, conv_table_e$tocode)) %>%
     dplyr::select(-sgg_cd) %>%
-    group_by(sgg_cd_c) %>%
-    summarize_all(list(~sum(., na.rm = TRUE))) %>%
+    # group_by(sgg_cd_c) %>%
+    # summarize_all(list(~sum(., na.rm = TRUE))) %>%
     ungroup 
     
 
@@ -492,6 +492,52 @@ covar_origin_10_fco = covar_origin_10_fc
 covar_origin_00_fc = fix_covar_fc(covar_origin_00_fc, 1, morinc_clw)
 covar_origin_05_fc = fix_covar_fc(covar_origin_05_fc, 2, morinc_clw)
 covar_origin_10_fc = fix_covar_fc(covar_origin_10_fc, 3, morinc_clw)
+
+# ## Fix NDVI
+# p_load(MODIStsp, terra, exactextractr)
+# # MODIStsp()
+# mtpath10 = "/mnt/d/MODIStsp/VI_16Days_250m_v6/Time_Series/RData/Terra/NDVI/MOD13Q1_NDVI_1_2010_353_2010_RData.RData"
+# mtpath05 = "/mnt/d/MODIStsp2005/VI_16Days_250m_v6/Time_Series/RData/Terra/NDVI/MOD13Q1_NDVI_1_2005_353_2005_RData.RData" 
+# mtpath00 = "/mnt/d/MODIStsp2000/VI_16Days_250m_v6/Time_Series/RData/Terra/NDVI/MOD13Q1_NDVI_49_2000_353_2000_RData.RData" 
+
+# process_ndvi = function(rdpath, targetpath) {
+#     load(rdpath)
+#     spr = rast(raster_ts)
+#     cat("Computing median cells...\n")
+#     spr_med = terra::tapp(spr, rep(1, nlyr(spr)), 'median', cores = 8)
+#     terra::writeRaster(spr_med, targetpath, overwrite = TRUE)
+#     cat("Finished processing.\n")
+#     rm(raster_ts, spr, spr_med)
+#     cat("Finished postprocessing sanitization.\n")
+# }
+
+# get_ndvi_avg_median = function(fc, ndvipath) {
+#     ndvi_pnt = rast(ndvipath)
+#     ndvi_avg = exactextractr::exact_extract(ndvi_pnt, fc, 'mean')
+#     cat("Average value is computed.\n")
+#     return(ndvi_avg)
+# }
+
+# ndvi_path_10 = str_c(drivebase, "Data/NDVI_2010_Y1_median.tif")
+# ndvi_path_05 = str_c(drivebase, "Data/NDVI_2005_Y1_median.tif")
+# ndvi_path_00 = str_c(drivebase, "Data/NDVI_2000_Y1_median.tif")
+
+# # Process NDVI time series
+# process_ndvi(mtpath10, ndvi_path_10)
+# process_ndvi(mtpath05, ndvi_path_05)
+# process_ndvi(mtpath00, ndvi_path_00)
+
+# # Average
+# ndvi_avg_10 = get_ndvi_avg_median(covar_origin_10_fc, ndvi_path_10)
+# ndvi_avg_05 = get_ndvi_avg_median(covar_origin_05_fc, ndvi_path_05)
+# ndvi_avg_00 = get_ndvi_avg_median(covar_origin_00_fc, ndvi_path_00)
+
+# covar_origin_10_fc = covar_origin_10_fc %>%
+#     mutate(NDVI_mean = ndvi_avg_10)
+# covar_origin_05_fc = covar_origin_05_fc %>%
+#     mutate(NDVI_mean = ndvi_avg_05)
+# covar_origin_00_fc = covar_origin_00_fc %>%
+#     mutate(NDVI_mean = ndvi_avg_00)
 
 save(covar_origin_00_fc, covar_origin_05_fc, covar_origin_10_fc,
      file = "/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/Manuscript/Clustering_Base_sf_091522.RData",

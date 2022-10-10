@@ -1330,7 +1330,7 @@ tmap_satscan = function(basemap, sats, threshold = 2, significance = 0.01, alpha
     }
     smc_shps = do.call(rbind, smc_shps) %>%
             mutate(cluster = seq_len(nclust),
-                   class_cl = c('#C41B4050', rep(NA, nrow(.)-1))) #'#D980AF'
+                   class_cl = c('#E15759', rep(NA, nrow(.)-1))) #'#D980AF'
     st_crs(smc_shps) = st_crs(basemap)
 
         #return(smc_shps)
@@ -1341,13 +1341,13 @@ tmap_satscan = function(basemap, sats, threshold = 2, significance = 0.01, alpha
         if (area) {
             tm_cluster = tm_shape(smc_shps) +
                 tm_borders(col = 'dark grey', lwd = 0.5) +
-                tm_fill('prim_cluster', pal = c('white', '#e9592d'), colorNA = 'transparent', showNA = FALSE, legend.show = FALSE) 
+                tm_fill('prim_cluster', pal = c('white', '#e15759'), colorNA = 'transparent', showNA = FALSE, legend.show = FALSE) 
         } else {
             if (nrow(smc_shps) == 1) {
                 tm_cluster = tm_shape(basemap) +
                         tm_borders(col = 'dark grey', lwd = 0.8) +
                         tm_shape(smc_shps[1,]) +
-                        tm_borders('#FF0000', lwd = 1.2) +
+                        tm_borders('#E15759', lwd = 1.2) +
                         tm_fill('class_cl', colorNA = 'transparent', showNA = FALSE)
             } else {
                 tm_cluster = tm_shape(basemap) +
@@ -1428,7 +1428,7 @@ df_satscan_primary = function(basemap, sats, threshold = 2, significance = 0.01,
     }
     smc_shps = do.call(rbind, smc_shps) %>%
             mutate(cluster = seq_len(nclust),
-                   class_cl = c('#C41B4050', rep(NA, nrow(.)-1))) %>% #'#D980AF'
+                   class_cl = c('#E15759', rep(NA, nrow(.)-1))) %>% #'#D980AF'
             mutate(analysis_title = unique(sats$analysis_title))
     st_crs(smc_shps) = st_crs(basemap)
 
@@ -1588,7 +1588,9 @@ map_lisa = function(map, lisa.var, vset = NULL, degree.s = 1, signif = 0.05, tit
     quadrant[v.o >0 & v.lag<0] <- "HL"
     quadrant[!is.na(quadrant) & (lisa_resdf[,5]>signif)] <- NA
 
-    colpal = c("blue", "deepskyblue1", "pink", "red")
+    colpal = c("#4E79A7", "deepskyblue1", "pink", "#E15759")
+    # To match color code
+    colpal = rev(colpal)
     namepal = c("HH", "HL", "LH", "LL")
     vals_real = sort(unique(quadrant))
     pal_fin = colpal[grep(str_c("(", str_c(vals_real, collapse = "|"), ")"), namepal)]

@@ -666,10 +666,18 @@ generate_satscan_prm = function(data,
         string_search_n =
             switch(vset,
                     age = str_c('^(p_65p)*.*_', sex_t, '$'),
+                    educ = str_c('^(p_hbac)*.*_', sex_t, '$'),
+                    environ = str_c('^ap_', '^NDVI_', sep = '|'),
+                    behav = str_c('^r_(?!physmid)'),
+                    enbehav = str_c('^r_(?!physmid)', '^ap_', '^NDVI_', sep = '|'),
                     set1 = str_c('^(p_65p|p_hbac)*.*_', sex_t, '$'),
                     set2 = str_c(str_c('^p_*.*_', sex_t, '$'), '^ap_', '^NDVI_', sep = '|'),
                     set3 = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_(?!physmid)', '^ap_', '^NDVI_', sep = '|'),
                     set4 = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_', '^n_pw', '^ap_', '^NDVI_', sep = '|'))
+        
+        if (!is.null(add_var)) {
+            string_search_n = str_c(string_search_n, "|", add_var)
+        }
 
         if (iscount) {
             lms = regress_counts(data = data,
@@ -1413,7 +1421,8 @@ df_satscan_primary = function(basemap, sats, threshold = 2, significance = 0.01,
                     ellps_prime = ellps[1,]
                     centrds = st_centroid(basemap, of_largest_polygon = TRUE)
                     basemap_cls = basemap %>%
-                        mutate(prim_cluster = as.factor(as.vector(st_intersects(centrds, ellps_prime, sparse = F))))
+                        mutate(prim_cluster = as.factor(as.vector(st_intersects(centrds, ellps_prime, sparse = F)))) %>%
+                        mutate(nflag = str_c("N=", sum(prim_cluster == "TRUE")))
                     return(basemap_cls)
             })
         nclust = 1

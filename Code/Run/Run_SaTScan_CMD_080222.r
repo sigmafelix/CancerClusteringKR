@@ -1,6 +1,6 @@
 ### SaTScan standalone batch
 ### June 22, 2022
-### Last revised Sep 15, 2022
+### Last revised Oct 27, 2022
 ### Insang Song (sigmafelix@hotmail.com)
 
 

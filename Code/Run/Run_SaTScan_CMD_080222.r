@@ -509,7 +509,7 @@ p3_all_v4_df = Reduce(rbind, p3_all_v4)
 write_rds(p3_all_v4_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_ASMR_vset4_resid.rds")
 
 
-## Covariate control (Model 6: variable set 3 + Stomach diagnosis rate) ####
+## Covariate control (Model 5: variable set 3 + Stomach diagnosis rate) ####
 # run for the period 3 (normal) ####
 p3_all_v5 = mapply(function(x, y) {
     generate_satscan_prm(data = dat3,

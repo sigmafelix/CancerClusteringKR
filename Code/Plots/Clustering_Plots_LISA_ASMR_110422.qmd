@@ -235,7 +235,7 @@ ref_check =
                 year = c('1999-2003', '2004-2008', '2009-2013'),
                 cancer = c('Stomach', 'Lung'),
                 sex = c('Male', 'Female')) %>%
-    mutate(year != "1999-2003" & vset != c("M3: M2+Behavior"))
+    filter(year != "1999-2003" | vset != c("M3: M2+Behavior"))
 base_sgg = covar_origin_00_fc %>%
     dplyr::select(sgg_cd_c)
 
@@ -573,7 +573,7 @@ lisa_mortality_sf %>%
 
 ## Sensitivity (Poisson)
 
-```{r sensitivity plot Poisson, fig.width = 9, fig.height = 6, eval=T}
+```{r sensitivity plot Poisson, fig.width = 9, fig.height = 6}
 
 p_v0_reslp = clear_input(filepath = str_c(rdsdir, "satscan_NPois_uncontrolled_resid.rds"))
 p_va_reslp = clear_input(filepath = str_c(rdsdir, "satscan_NPois_age_resid.rds"))
@@ -589,11 +589,11 @@ sssp_mortality_sf_v0 = extr_sss_sf(covar_origin_00_fc, p_v0_reslp, "_d_") %>%
     mutate(vset = 'Base') %>%
     mutate(sex = ifelse(grepl('_female_', analysis_title), 'Female', 'Male'))
 sssp_incidence_df_va = extr_sss_sf(covar_origin_00_fc, p_va_reslp, "_i_") %>%
-    mutate(vset = 'M1: Base+Age') %>%
+    mutate(vset = 'M1: Base+Senior') %>%
     mutate(sex = ifelse(grepl('_female_', analysis_title), 'Female', 'Male')) %>%
     st_drop_geometry
 sssp_mortality_df_va = extr_sss_sf(covar_origin_00_fc, p_va_reslp, "_d_") %>%
-    mutate(vset = 'M1: Base+Age') %>%
+    mutate(vset = 'M1: Base+Senior') %>%
     mutate(sex = ifelse(grepl('_female_', analysis_title), 'Female', 'Male')) %>%
     st_drop_geometry
 
@@ -654,7 +654,7 @@ sssp_incidence_sf_va %>%
         tm_text("nflag", size = 1.5, remove.overlap = TRUE) +
         tm_facets(by = c("year", "cancersex"), nrow = 3, ncol = 3) +
         tm_layout(panel.label.bg.color = 'transparent',
-                  title = "Incidence count\n(age controlled)",
+                  title = "Incidence count\n(Base+Senior)",
                   frame = FALSE,
                   legend.title.size = 1,
                   legend.text.size = 1,
@@ -675,7 +675,7 @@ sssp_mortality_sf_va %>%
         tm_text("nflag", size = 1.5, remove.overlap = TRUE) +
         tm_facets(by = c("year", "cancersex"), nrow = 3, ncol = 3) +
         tm_layout(panel.label.bg.color = 'transparent',
-                  title = "Mortality count\n(age controlled)",
+                  title = "Mortality count\n(Base+Senior)",
                   frame = FALSE,
                   legend.title.size = 1,
                   legend.text.size = 1,
@@ -684,334 +684,6 @@ sssp_mortality_sf_va %>%
                   outer.margins = c(0.005, 0.005, 0.005, -0.05))
 
 ```
-
-## Sensitivity (M5)
-```{r Sensitivity (m5), fig.width = 9, fig.height = 6, include=FALSE, eval = FALSE}
-
-sss_incidence_df_v5 = extr_sss_sf(covar_origin_00_fc, p_v5_resl, "_i_") %>%
-    mutate(vset = 'M5: M4+Screening') %>%
-    mutate(sex = ifelse(grepl('_female_', analysis_title), 'Female', 'Male')) %>%
-    st_drop_geometry
-sss_mortality_df_v5 = extr_sss_sf(covar_origin_00_fc, p_v5_resl, "_d_") %>%
-    mutate(vset = 'M5: M4+Screening') %>%
-    mutate(sex = ifelse(grepl('_female_', analysis_title), 'Female', 'Male')) %>%
-    st_drop_geometry
-
-# sssp_incidence_df_va = right_join(sssp_incidence_sf_va, ref_check)
-# sssp_mortality_df_va = right_join(sssp_mortality_sf_va, ref_check)
-
-ref_check_m5 = 
-    expand.grid(sgg_cd_c = unique(sss_incidence_df$sgg_cd_c),
-                vset = c("M5: M4+Screening"),
-                year = c('2009-2013'),
-                cancer = c('Stomach'),
-                sex = c('Male', 'Female'))
-# ref_check_m4 = ref_check %>%
-#     filter(grepl('^M4', vset) & year != '1999-2003')
-
-sss_incidence_sf_v5 = right_join(base_sgg, ref_check_m5) %>%
-    left_join(sss_incidence_df_v5)
-sss_mortality_sf_v5 = right_join(base_sgg, ref_check_m5) %>%
-    left_join(sss_mortality_df_v5)
-
-# sssp_incidence_sf_vad = 
-# sssp_incidence_sf_va %>%
-#     mutate(prim_cluster = ifelse(prim_cluster == "FALSE", NA, prim_cluster))
-
-
-sss_incidence_sf_v5 = 
-    sss_incidence_sf_v5 %>%
-        mutate(prim_cluster = ifelse(prim_cluster == "FALSE", NA, prim_cluster)) %>%
-        filter(sex != "Female" | cancer != "Lung") %>%
-        group_by(cancer, sex, year, vset) %>%
-        summarize(nflag = unique(nflag)) %>%
-        ungroup %>%
-        st_centroid 
-
-sss_mortality_sf_v5 = 
-    sss_mortality_sf_v5 %>%
-        mutate(prim_cluster = ifelse(prim_cluster == "FALSE", NA, prim_cluster)) %>%
-        filter(sex != "Female" | cancer != "Lung") %>%
-        group_by(cancer, sex, year, vset) %>%
-        summarize(nflag = unique(nflag)) %>%
-        ungroup %>%
-        st_centroid 
-
-
-for (k in seq.int(1, nrow(sss_incidence_sf_v5))) {
-    sss_incidence_sf_v5$geom[[k]] = sss_incidence_sf_v5$geom[[k]] + st_point(c(-1.35e5, 2e5), dim = 'XY')    
-}
-for (k in seq.int(1, nrow(sss_mortality_sf_v5))) {
-    sss_mortality_sf_v5$geom[[k]] = sss_mortality_sf_v5$geom[[k]] + st_point(c(-1.35e5, 2e5), dim = 'XY')    
-}
-
-
-
-sss_incidence_sf_v5 %>%
-    mutate(prim_cluster = ifelse(prim_cluster == "FALSE", NA, 'Detected')) %>%
-    filter(sex != "Female" | cancer != "Lung") %>%
-    mutate(cancersex = ifelse(sex == "Male", str_c(cancer, " (Male)"), str_c(cancer, " (Female)"))) %>%
-    mutate(cancersex = factor(cancersex, 
-        levels = c("Lung (Male)", "Stomach (Male)", "Stomach (Female)"))) %>%
-    # filter((cancer != "Lung" | sex != "Female")) %>%
-    tm_shape(.) +
-        tm_fill('prim_cluster', title = "Primary cluster", pal = c("#E15759"), showNA = FALSE, colorNA = "white", labels = c('Detected')) +
-        tm_borders('dark grey', lwd = 0.4) +
-        tm_facets(by = c("year", "cancersex"), nrow = 1, ncol = 2) +
-        tm_layout(panel.label.bg.color = 'transparent',
-                  title = "Incidence rate\n(M5: M4+Screening)",
-                  frame = FALSE,
-                  legend.title.size = 1,
-                  legend.text.size = 1,
-                  panel.label.size = 1.4,
-                  fontfamily = "Pretendard",
-                  outer.margins = c(0.005, 0.005, 0.005, -0.05))
-
-sss_mortality_sf_v5 %>%
-    mutate(prim_cluster = ifelse(prim_cluster == "FALSE", NA, "Detected")) %>%
-    filter(sex != "Female" | cancer != "Lung") %>%
-    mutate(cancersex = ifelse(sex == "Male", str_c(cancer, " (Male)"), str_c(cancer, " (Female)"))) %>%
-    mutate(cancersex = factor(cancersex, 
-        levels = c("Lung (Male)", "Stomach (Male)", "Stomach (Female)"))) %>%    # filter((cancer != "Lung" | sex != "Female")) %>%
-    tm_shape(.) +
-        tm_fill('prim_cluster', title = "Primary cluster", pal = c("#E15759"), showNA = FALSE, colorNA = "white", labels = c('Detected')) +
-        tm_borders('dark grey', lwd = 0.4) +
-        tm_facets(by = c("year", "cancersex"), nrow = 1, ncol = 2) +
-        tm_layout(panel.label.bg.color = 'transparent',
-                  title = "Mortality rate\n(M5: M4+Screening)",
-                  frame = FALSE,
-                  legend.title.size = 1,
-                  legend.text.size = 1,
-                  panel.label.size = 1.4,
-                  fontfamily = "Pretendard",
-                  outer.margins = c(0.005, 0.005, 0.005, -0.05))
-```
-
-```{r Sensitivity (m4), fig.width = 12, fig.height = 6.5, include=F, eval=F}
-
-sss_incidence_df_v4 = extr_sss_sf(covar_origin_00_fc, p_v3_resl, "_i_") %>%
-    mutate(vset = 'M4: M3+Behavior') %>%
-    mutate(sex = ifelse(grepl('_female_', analysis_title), 'Female', 'Male')) %>%
-    st_drop_geometry
-sss_mortality_df_v4 = extr_sss_sf(covar_origin_00_fc, p_v3_resl, "_d_") %>%
-    mutate(vset = 'M4: M3+Behavior') %>%
-    mutate(sex = ifelse(grepl('_female_', analysis_title), 'Female', 'Male')) %>%
-    st_drop_geometry
-
-# sssp_incidence_df_va = right_join(sssp_incidence_sf_va, ref_check)
-# sssp_mortality_df_va = right_join(sssp_mortality_sf_va, ref_check)
-
-ref_check_m4 = 
-    expand.grid(sgg_cd_c = unique(sss_incidence_df$sgg_cd_c),
-                vset = c("M4: M3+Behavior"),
-                year = c('2004-2008', '2009-2013'),
-                cancer = c('Stomach', 'Lung'),
-                sex = c('Male', 'Female'))
-# ref_check_m4 = ref_check %>%
-#     filter(grepl('^M4', vset) & year != '1999-2003')
-
-sss_incidence_sf_v4 = right_join(base_sgg, ref_check_m4) %>%
-    left_join(sss_incidence_df_v4)
-sss_mortality_sf_v4 = right_join(base_sgg, ref_check_m4) %>%
-    left_join(sss_mortality_df_v4)
-
-# sssp_incidence_sf_vad = 
-# sssp_incidence_sf_va %>%
-#     mutate(prim_cluster = ifelse(prim_cluster == "FALSE", NA, prim_cluster))
-
-
-sss_incidence_sf_v4 = 
-    sss_incidence_sf_v4 %>%
-        mutate(prim_cluster = ifelse(prim_cluster == "FALSE", NA, prim_cluster)) %>%
-        filter(sex != "Female" | cancer != "Lung") %>%
-        group_by(cancer, sex, year, vset) %>%
-        summarize(nflag = unique(nflag)) %>%
-        ungroup %>%
-        st_centroid 
-
-sss_mortality_sf_v4 = 
-    sss_mortality_sf_v4 %>%
-        mutate(prim_cluster = ifelse(prim_cluster == "FALSE", NA, prim_cluster)) %>%
-        filter(sex != "Female" | cancer != "Lung") %>%
-        group_by(cancer, sex, year, vset) %>%
-        summarize(nflag = unique(nflag)) %>%
-        ungroup %>%
-        st_centroid 
-
-
-for (k in seq.int(1, nrow(sss_incidence_sf_v4))) {
-    sss_incidence_sf_v4$geom[[k]] = sss_incidence_sf_v4$geom[[k]] + st_point(c(-1.35e5, 2e5), dim = 'XY')    
-}
-for (k in seq.int(1, nrow(sss_mortality_sf_v4))) {
-    sss_mortality_sf_v4$geom[[k]] = sss_mortality_sf_v4$geom[[k]] + st_point(c(-1.35e5, 2e5), dim = 'XY')    
-}
-
-
-
-sss_incidence_sf_v4 %>%
-    mutate(prim_cluster = ifelse(prim_cluster == "FALSE", NA, 'Detected')) %>%
-    filter(sex != "Female" | cancer != "Lung") %>%
-    mutate(cancersex = ifelse(sex == "Male", str_c(cancer, " (Male)"), str_c(cancer, " (Female)"))) %>%
-    mutate(cancersex = factor(cancersex, 
-        levels = c("Lung (Male)", "Stomach (Male)", "Stomach (Female)"))) %>%
-    # filter((cancer != "Lung" | sex != "Female")) %>%
-    tm_shape(.) +
-        tm_fill('prim_cluster', title = "Primary cluster", pal = c("#E15759"), showNA = FALSE, colorNA = "white", labels = c('Detected')) +
-        tm_borders('dark grey', lwd = 0.4) +
-        tm_facets(by = c("year", "cancersex"), nrow = 2, ncol = 4) +
-        tm_layout(panel.label.bg.color = 'transparent',
-                  title = "Incidence rate\n(M4: M3+Behavior)",
-                  frame = FALSE,
-                  legend.title.size = 1,
-                  legend.text.size = 1,
-                  panel.label.size = 1.4,
-                  fontfamily = "Pretendard",
-                  outer.margins = c(0.005, 0.005, 0.005, -0.05))
-
-sss_mortality_sf_v4 %>%
-    mutate(prim_cluster = ifelse(prim_cluster == "FALSE", NA, "Detected")) %>%
-    filter(sex != "Female" | cancer != "Lung") %>%
-    mutate(cancersex = ifelse(sex == "Male", str_c(cancer, " (Male)"), str_c(cancer, " (Female)"))) %>%
-    mutate(cancersex = factor(cancersex, 
-        levels = c("Lung (Male)", "Stomach (Male)", "Stomach (Female)"))) %>%    # filter((cancer != "Lung" | sex != "Female")) %>%
-    tm_shape(.) +
-        tm_fill('prim_cluster', title = "Primary cluster", pal = c("#E15759"), showNA = FALSE, colorNA = "white", labels = c('Detected')) +
-        tm_borders('dark grey', lwd = 0.4) +
-        tm_facets(by = c("year", "cancersex"), nrow = 2, ncol = 4) +
-        tm_layout(panel.label.bg.color = 'transparent',
-                  title = "Mortality rate\n(M4: M3+Behavior)",
-                  frame = FALSE,
-                  legend.title.size = 1,
-                  legend.text.size = 1,
-                  panel.label.size = 1.4,
-                  fontfamily = "Pretendard",
-                  outer.margins = c(0.005, 0.005, 0.005, -0.05))
-```
-
-
-## Sensitivity (Education only)
-```{r Sensitivity (education only), fig.width = 9, fig.height = 6, eval=F}
-
-sss_incidence_df_ve = extr_sss_sf(covar_origin_00_fc, p_ve_resl, "_i_") %>%
-    mutate(vset = 'Base+Education') %>%
-    mutate(sex = ifelse(grepl('_female_', analysis_title), 'Female', 'Male')) %>%
-    mutate(cancersex = ifelse(sex == "Male", str_c(cancer, " (Male)"), str_c(cancer, " (Female)"))) %>%
-    st_drop_geometry %>%
-    filter(sex != "Female" | cancer != "Lung")
-sss_mortality_df_ve = extr_sss_sf(covar_origin_00_fc, p_ve_resl, "_d_") %>%
-    mutate(vset = 'Base+Education') %>%
-    mutate(sex = ifelse(grepl('_female_', analysis_title), 'Female', 'Male')) %>%
-    mutate(cancersex = ifelse(sex == "Male", str_c(cancer, " (Male)"), str_c(cancer, " (Female)"))) %>%
-    filter(cancersex != "Lung (Female)") %>%
-    st_drop_geometry %>%
-    filter(sex != "Female" | cancer != "Lung")
-
-# sssp_incidence_df_va = right_join(sssp_incidence_sf_va, ref_check)
-# sssp_mortality_df_va = right_join(sssp_mortality_sf_va, ref_check)
-
-ref_check_me = 
-    expand.grid(sgg_cd_c = unique(sss_incidence_df$sgg_cd_c),
-                vset = c("Base+Education"),
-                year = c('1999-2003', '2004-2008', '2009-2013'),
-                cancer = c('Stomach', 'Lung'),
-                sex = c('Male', 'Female')) %>%
-    filter(sex != "Female" | cancer != "Lung")
-
-# ref_check_m4 = ref_check %>%
-#     filter(grepl('^M4', vset) & year != '1999-2003')
-
-sss_incidence_sf_ve = right_join(base_sgg, ref_check_me) %>%
-    left_join(sss_incidence_df_ve)
-sss_mortality_sf_ve = right_join(base_sgg, ref_check_me) %>%
-    left_join(sss_mortality_df_ve)
-
-# sssp_incidence_sf_vad = 
-# sssp_incidence_sf_va %>%
-#     mutate(prim_cluster = ifelse(prim_cluster == "FALSE", NA, prim_cluster))
-
-
-sss_incidence_sf_ve_p = 
-    sss_incidence_sf_ve %>%
-        mutate(prim_cluster = ifelse(prim_cluster == "FALSE", NA, prim_cluster)) %>%
-        filter(sex != "Female" | cancer != "Lung") %>%
-        group_by(cancer, sex, year, cancersex, vset) %>%
-        summarize(nflag = unique(nflag)) %>%
-        ungroup %>%
-        st_centroid %>%
-        filter(!is.na(cancersex)) %>%
-    mutate(cancersex = factor(cancersex, 
-        levels = c("Lung (Male)", "Stomach (Male)", "Stomach (Female)"))) %>%
-        mutate(cancersex = droplevels(cancersex))
-
-sss_mortality_sf_ve_p = 
-    sss_mortality_sf_ve %>%
-        mutate(prim_cluster = ifelse(prim_cluster == "FALSE", NA, prim_cluster)) %>%
-        filter(sex != "Female" | cancer != "Lung") %>%
-        group_by(cancer, sex, year, cancersex, vset) %>%
-        summarize(nflag = unique(nflag)) %>%
-        ungroup %>%
-        st_centroid %>%
-        filter(!is.na(cancersex)) %>%
-    mutate(cancersex = factor(cancersex, 
-        levels = c("Lung (Male)", "Stomach (Male)", "Stomach (Female)"))) %>%
-        mutate(cancersex = droplevels(cancersex))
-
-
-for (k in seq.int(1, nrow(sss_incidence_sf_ve_p))) {
-    sss_incidence_sf_ve_p$geom[[k]] = sss_incidence_sf_ve_p$geom[[k]] + st_point(c(-1.35e5, 2e5), dim = 'XY')    
-}
-for (k in seq.int(1, nrow(sss_mortality_sf_ve_p))) {
-    sss_mortality_sf_ve_p$geom[[k]] = sss_mortality_sf_ve_p$geom[[k]] + st_point(c(-1.35e5, 2e5), dim = 'XY')    
-}
-
-
-
-sss_incidence_sf_ve %>%
-    mutate(prim_cluster = ifelse(prim_cluster == "FALSE", NA, 'Detected')) %>%
-    filter(sex != "Female" | cancer != "Lung") %>%
-    mutate(cancersex = ifelse(sex == "Male", str_c(cancer, " (Male)"), str_c(cancer, " (Female)"))) %>%
-    mutate(cancersex = factor(cancersex, 
-        levels = c("Lung (Male)", "Stomach (Male)", "Stomach (Female)"))) %>%
-    # filter((cancer != "Lung" | sex != "Female")) %>%
-    tm_shape(.) +
-        tm_fill('prim_cluster', title = "Primary cluster", pal = c("#E15759"), showNA = FALSE, colorNA = "white", labels = c('Detected')) +
-        tm_borders('dark grey', lwd = 0.4) +
-        tm_facets(by = c("year", "cancersex"), nrow = 3, ncol = 3) +
-        tm_shape(sss_incidence_sf_ve_p) +
-        tm_text("nflag", size = 1.5, remove.overlap = TRUE) +
-        tm_facets(by = c("year", "cancersex"), nrow = 3, ncol = 3) +
-        tm_layout(panel.label.bg.color = 'transparent',
-                  title = "Incidence rate\n(Base+Education)",
-                  frame = FALSE,
-                  legend.title.size = 1,
-                  legend.text.size = 1,
-                  panel.label.size = 1.4,
-                  fontfamily = "Pretendard",
-                  outer.margins = c(0.005, 0.005, 0.005, -0.05))
-
-sss_mortality_sf_ve %>%
-    mutate(prim_cluster = ifelse(prim_cluster == "FALSE", NA, "Detected")) %>%
-    filter(sex != "Female" | cancer != "Lung") %>%
-    mutate(cancersex = ifelse(sex == "Male", str_c(cancer, " (Male)"), str_c(cancer, " (Female)"))) %>%
-    mutate(cancersex = factor(cancersex, 
-        levels = c("Lung (Male)", "Stomach (Male)", "Stomach (Female)"))) %>%
-    tm_shape(.) +
-        tm_fill('prim_cluster', title = "Primary cluster", pal = c("#E15759"), showNA = FALSE, colorNA = "white", labels = c('Detected')) +
-        tm_borders('dark grey', lwd = 0.4) +
-        tm_facets(by = c("year", "cancersex"), nrow = 3, ncol = 3) +
-        tm_shape(sss_mortality_sf_ve_p) +
-        tm_text("nflag", size = 1.5, remove.overlap = TRUE) +
-        tm_facets(by = c("year", "cancersex"), nrow = 3, ncol = 3) +
-        tm_layout(panel.label.bg.color = 'transparent',
-                  title = "Mortality rate\n(Base+Education)",
-                  frame = FALSE,
-                  legend.title.size = 1,
-                  legend.text.size = 1,
-                  panel.label.size = 1.4,
-                  fontfamily = "Pretendard",
-                  outer.margins = c(0.005, 0.005, 0.005, -0.05))
-```
-
 
 
 ## summary tables

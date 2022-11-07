@@ -159,9 +159,24 @@ make_shortdf2 = function(sfd) {
     return(sfd_d)
 }
 
-c10 = make_shortdf(covar_origin_10_fc)
-c05 = make_shortdf(covar_origin_05_fc)
-c00 = make_shortdf(covar_origin_00_fc)
+c10 = make_shortdf(covar_origin_10_fc) %>% mutate(period = "2009-2013")
+c05 = make_shortdf(covar_origin_05_fc) %>% mutate(period = "2004-2008")
+c00 = make_shortdf(covar_origin_00_fc) %>% mutate(period = "1999-2003")
+
+c0010 = bind_rows(c00, c05, c10) %>%
+    mutate(valuetype = ifelse(target == 'i', 'Incidence', 'Mortality')) %>%
+    mutate(sex = factor(sex, levels = c('male', 'female'), labels = c('Male', 'Female')))
+
+c0010_gg = c0010 %>%
+    ggplot(data = ., 
+           mapping = aes(x = period, y = value)) +
+        theme_bw() +
+        geom_boxplot() +
+        facet_grid(valuetype ~ cancertype * sex) +
+        ylab('Age-standardized rate (per 100,000)') +
+        theme(text = element_text(family = 'Pretendard'))
+ggsave(c0010_gg, filename = "/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering/Manuscript/Fig1_period_rate.png",
+       width = 10, height = 6, units = 'in', dpi = 508, scale = 0.75)
 
 c10_gg = c10 %>%
     ggplot(data = ., mapping = aes(x = value)) +

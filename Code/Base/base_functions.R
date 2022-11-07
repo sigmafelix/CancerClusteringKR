@@ -1155,8 +1155,8 @@ Version=10.1.0\\n',
     colnames(tss) = cn
     tss = tss %>% 
         mutate(analysis_title = title.analysis,
-                locid_lst = locid_extr) %>%
-        dplyr::select(analysis_title, 1:(ncol(.)-1))
+                locid_lst = list(locid_extr)) %>%
+        dplyr::select(analysis_title, 1:(ncol(.)))
     
     cat(str_glue("Modeltype={modeltype} ({dist.info})\nTarget variable={col.var}\nFile written:{fullpath.temp}\n",
                 modeltype = modeltype, dist.info = dist.info, col.var = col.var, fullpath.temp = fullpath.temp))

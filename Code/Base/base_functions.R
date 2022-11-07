@@ -1135,11 +1135,12 @@ Version=10.1.0\\n',
     #file.remove(fullpath.temp)
 
     ## Part 2: retrieve the cluster locids
-    resdump = file(str_c(dir.target, title.analysis, ".txt"), "r")
-    resdump = readLines(resdump, n=50L)
+    resdump_con = file(str_c(dir.target, title.analysis, ".txt"), "r")
+    resdump = readLines(resdump_con, n=50L)
     locid_lns = grep("^1.Location|^  Coordinates", resdump)
     locid_extr = str_extract_all(resdump[seq.int(locid_lns[1], locid_lns[2]-1)], "\\d{5,5}")
     locid_extr = unlist(locid_extr)
+    close(resdump_con)
 
     ## Part 3: get tsv file
     if (modeltype == 0) {

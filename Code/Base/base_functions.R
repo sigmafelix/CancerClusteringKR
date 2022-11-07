@@ -666,15 +666,15 @@ generate_satscan_prm = function(data,
         sex_t = str_extract(title.analysis, "(male|female|total)")
         string_search_n =
             switch(vset,
-                    age = str_c('^(p_65p)*.*_', sex_t, '$'),
-                    educ = str_c('^(p_hbac)*.*_', sex_t, '$'),
+                    age = str_c('^p_65p*.*_', sex_t, '$'),
+                    educ = str_c('^p_hbac*.*_', sex_t, '$'),
                     environ = str_c('^ap_', '^NDVI_', sep = '|'),
                     behav = str_c('^r_(?!physmid)'),
                     enbehav = str_c('^r_(?!physmid)', '^ap_', '^NDVI_', sep = '|'),
-                    set1 = str_c('^(p_65p|p_hbac)*.*_', sex_t, '$'),
-                    set2 = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_(?!physmid)', sep = '|'),
-                    set3 = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_(?!physmid)', '^ap_', '^NDVI_', sep = '|'),
-                    set4 = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_', '^n_pw', '^ap_', '^NDVI_', sep = '|'))
+                    set1 = str_c('^p_*.*_', sex_t, '$'),
+                    set2 = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_(walking|obesity|alcoholmonth|smoking)', sep = '|'), #old: (?!physmid)
+                    set3 = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_(walking|obesity|alcoholmonth|smoking)', '^ap_', '^NDVI_', sep = '|'),
+                    set4 = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_(walking|obesity|alcoholmonth|smoking)', '^n_pw', '^ap_', '^NDVI_', sep = '|'))
         
         if (!is.null(add_var)) {
             string_search_n = str_c(string_search_n, "|", add_var)
@@ -1009,7 +1009,7 @@ ReportHierarchicalClusters=y
 ;criteria for reporting secondary clusters(0=NoGeoOverlap, 1=NoCentersInOther, 2=NoCentersInMostLikely,  3=NoCentersInLessLikely, 4=NoPairsCentersEachOther, 5=NoRestrictions)
 CriteriaForReportingSecondaryClusters=0
 ;report gini clusters (y/n)
-ReportGiniClusters=y
+ReportGiniClusters=n
 ;gini index cluster reporting type (0=optimal index only, 1=all values)
 GiniIndexClusterReportingType=0
 ;spatial window maxima stops (comma separated decimal values[<=50%] )
@@ -1134,7 +1134,14 @@ Version=10.1.0\\n',
     file.remove(prm.path)
     #file.remove(fullpath.temp)
 
-    ## Part 2: get tsv file
+    ## Part 2: retrieve the cluster locids
+    resdump = file(str_c(dir.target, title.analysis, ".txt"), "r")
+    resdump = readLines(resdump, n=50L)
+    locid_lns = grep("^1.Location|^  Coordinates", resdump)
+    locid_extr = str_extract_all(resdump[seq.int(locid_lns[1], locid_lns[2]-1)], "\\d{5,5}")
+    locid_extr = unlist(locid_extr)
+
+    ## Part 3: get tsv file
     if (modeltype == 0) {
         dist.info = "Poisson"
         cn = c('cluster', 'locid', 'x', 'y', 'minor', 'major', 'angle', 'shape',
@@ -1147,12 +1154,16 @@ Version=10.1.0\\n',
     tss = read_fwf(str_c(dir.target, title.analysis, ".col.txt"), skip = 1)
     colnames(tss) = cn
     tss = tss %>% 
-        mutate(analysis_title = title.analysis) %>%
+        mutate(analysis_title = title.analysis,
+                locid_lst = locid_extr) %>%
         dplyr::select(analysis_title, 1:(ncol(.)-1))
+    
     cat(str_glue("Modeltype={modeltype} ({dist.info})\nTarget variable={col.var}\nFile written:{fullpath.temp}\n",
                 modeltype = modeltype, dist.info = dist.info, col.var = col.var, fullpath.temp = fullpath.temp))
 
     system(str_glue("rm {dir.target}/*", dir.target = dir.target))
+    
+    # res_fin = list(sssdf = tss, locids = locid_extr)
     return(tss)
     }
 
@@ -1272,16 +1283,20 @@ tmap_smerc = function(basemap, smc, threshold = 2, significance = 0.01, alpha = 
 }
 
 ## Plot SaTScan results directly
-tmap_satscan = function(basemap, sats, threshold = 2, significance = 0.01, alpha = 0.4, return_ellipses = TRUE, gini = FALSE, area = FALSE) {
+tmap_satscan = function(basemap, sats, 
+        threshold = 2, extrude= 100, 
+        significance = 0.01, alpha = 0.4, 
+        return_ellipses = TRUE, gini = FALSE, 
+        area = FALSE) {
     
     # Utility functions
     rotate = function(a) {a = a*pi/180; matrix(c(cos(a), sin(a), -sin(a), cos(a)), 2, 2)}
     satscanres_to_sf = function(ssres) {
         cntr = st_geometry(st_point(c(ssres$x, ssres$y)))
         ell = (nngeo::st_ellipse(pnt = cntr,
-                                 ex = ssres$minor,
-                                 ey = ssres$major,
-                                 res = 80) - cntr) * rotate(ssres$angle) + cntr
+                                 ex = ssres$minor + extrude,
+                                 ey = ssres$major + extrude,
+                                 res = 720) - cntr) * rotate(ssres$angle) + cntr
         ell = ell %>%
               st_sf %>%
               mutate(
@@ -1323,8 +1338,10 @@ tmap_satscan = function(basemap, sats, threshold = 2, significance = 0.01, alpha
                     st_crs(ellps) = st_crs(basemap)
                     ellps_prime = ellps[1,]
                     centrds = st_centroid(basemap, of_largest_polygon = TRUE)
+                    ellps_centr = as.vector(st_intersects(centrds, ellps_prime, sparse = F))
+                    stopifnot("SaTScan results do not equal to the geometric operation.\n" =sats$number_locs == sum(ellps_centr))
                     basemap_cls = basemap %>%
-                        mutate(prim_cluster = as.factor(as.vector(st_intersects(centrds, ellps_prime, sparse = F))))
+                        mutate(prim_cluster = as.factor(ellps_centr))
                     return(basemap_cls)
             })
         nclust = 1
@@ -1373,16 +1390,28 @@ tmap_satscan = function(basemap, sats, threshold = 2, significance = 0.01, alpha
     }
 
 ## Return SaTScan results in a data.frame
-df_satscan_primary = function(basemap, sats, threshold = 2, significance = 0.01, alpha = 0.4, return_ellipses = TRUE, gini = FALSE, area = FALSE) {
+# TODO: fix the precision issue (retrieve the exact values)
+df_satscan_primary = function(basemap, sats, threshold = 2,
+                    data_exact = dat1,
+                    extrude_def = -03, significance = 0.01, 
+                    alpha = 0.4, return_ellipses = TRUE, 
+                    gini = FALSE, area = FALSE) {
     
     # Utility functions
     rotate = function(a) {a = a*pi/180; matrix(c(cos(a), sin(a), -sin(a), cos(a)), 2, 2)}
-    satscanres_to_sf = function(ssres) {
-        cntr = st_geometry(st_point(c(ssres$x, ssres$y)))
+    satscanres_to_sf = function(ssres, dexact, extrude=extrude_def) {
+        dexact = dexact %>%
+            filter(sgg_cd_c == ssres$locid)
+        cntr = st_geometry(st_point(c(dexact$X, dexact$Y)))
+        angle = ssres$angle
+        angle_hor = -angle#ifelse(angle >= 0, -angle, angle)
+        # cntr = st_geometry(st_point(c(ssres$x, ssres$y)))
+        # "Angle" in the satscan res basically means the angle measured from the horizontal line
+        # it does NOT imply any rotation.
         ell = (nngeo::st_ellipse(pnt = cntr,
-                                 ex = ssres$minor,
-                                 ey = ssres$major,
-                                 res = 80) - cntr) * rotate(ssres$angle) + cntr
+                                 ex = (ssres$minor * ssres$shape)+extrude,
+                                 ey = ssres$minor +extrude,
+                                 res = 7200) - cntr) * rotate(angle_hor) + cntr
         ell = ell %>%
               st_sf %>%
               mutate(
@@ -1406,7 +1435,7 @@ df_satscan_primary = function(basemap, sats, threshold = 2, significance = 0.01,
         sats = sats %>% filter(GINI)
     }
     # test if the angle was weirdly reflected
-    sats = sats %>% mutate(angle = if_else(angle < 0, angle + 360, angle))
+    # sats = sats %>% mutate(angle = if_else(angle < 0, angle + 360, angle))
     nclust = nrow(sats)
     smc_shps = vector('list', length = length(sats$pvalue))
     # loop through
@@ -1417,12 +1446,16 @@ df_satscan_primary = function(basemap, sats, threshold = 2, significance = 0.01,
         sats[1,] %>%
             split(., .$cluster) %>%
             lapply(function(x) {
-                    ellps = satscanres_to_sf(x)
+                    ellps = satscanres_to_sf(x, data_exact)
                     st_crs(ellps) = st_crs(basemap)
                     ellps_prime = ellps[1,]
                     centrds = st_centroid(basemap, of_largest_polygon = TRUE)
+                    ellps_centr = as.vector(st_intersects(centrds, ellps_prime, sparse = F))
+                    print(sum(ellps_centr))
+                    print(sats$number_locs[1])
+                    stopifnot("SaTScan results do not match the geometric operation results.\n" =sats$number_locs[1] == sum(ellps_centr))
                     basemap_cls = basemap %>%
-                        mutate(prim_cluster = as.factor(as.vector(st_intersects(centrds, ellps_prime, sparse = F)))) %>%
+                        mutate(prim_cluster = as.factor(ellps_centr)) %>%
                         mutate(nflag = str_c("N=", sum(prim_cluster == "TRUE")))
                     return(basemap_cls)
             })

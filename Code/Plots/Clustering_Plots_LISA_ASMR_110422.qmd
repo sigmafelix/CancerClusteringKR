@@ -176,6 +176,33 @@ extr_sss_sf = function(fc, resl, flag = "_i_") {
 ```
 
 
+```{r}
+packed = c(37370, 38400, 22310, 22070, 22030, 37380, 37390, 22050, 22040, 22010,
+                          38310, 22060, 22020, 38330, 37310, 38370, 38390, 37050, 38030, 37100,
+                          37030, 37320, 38320, 38360, 38380, 37360, 38060, 37070, 36060, 38080,
+                          37330, 37040, 38340, 38020, 36330, 38010, 38350, 35330, 35340, 35050,
+                          33340, 37012, 37400, 37080, 36030, 36020, 37340, 37350, 38070, 38040,
+                          38050, 36320, 37020, 37060, 37410, 35320, 38100, 37090, 36350, 37420,
+                          36360, 26310, 21120, 38090, 35350, 37011, 33330, 21080, 34310, 21150,
+                          36370, 21110, 26010, 35360, 32050, 33380)
+
+satscanres_to_sf(p_v0_resl[[2]], dat1, 0) %>%
+    st_geometry %>%
+    plot(axes=T)
+covar_origin_00_fc %>% filter(sgg_cd_c %in% packed) %>%
+    st_centroid %>%
+    st_geometry %>%
+    plot(add=T, pch=19, col='red')
+covar_origin_00_fc %>% #filter(sgg_cd_c %in% packed) %>%
+    st_centroid %>%
+    st_geometry %>%
+    plot(add=T, pch=19, cex=0.3, col='blue')
+
+```
+
+
+
+
 ## Data filtering
 ```{r data filtering}
 
@@ -206,10 +233,10 @@ sss_incidence_sf_v3 = extr_sss_sf(covar_origin_00_fc, p_v3_resl, "_i_") %>%
     mutate(vset = 'M4: M3+Environment')
 sss_mortality_sf_v3 = extr_sss_sf(covar_origin_00_fc, p_v3_resl, "_d_") %>%
     mutate(vset = 'M4: M3+Environment')
-sss_incidence_sf_v5 = extr_sss_sf(covar_origin_00_fc, p_v3_resl, "_i_") %>%
-    mutate(vset = 'M5: M4+Screening')
-sss_mortality_sf_v5 = extr_sss_sf(covar_origin_00_fc, p_v3_resl, "_d_") %>%
-    mutate(vset = 'M5: M4+Screening')
+# sss_incidence_sf_v5 = extr_sss_sf(covar_origin_00_fc, p_v3_resl, "_i_") %>%
+#     mutate(vset = 'M5: M4+Screening')
+# sss_mortality_sf_v5 = extr_sss_sf(covar_origin_00_fc, p_v3_resl, "_d_") %>%
+#     mutate(vset = 'M5: M4+Screening')
 
 sss_incidence_df = 
     rbind(sss_incidence_sf_v0,
@@ -223,8 +250,8 @@ sss_mortality_df =
     rbind(sss_mortality_sf_v0,
           sss_mortality_sf_va,
           sss_mortality_sf_v1,
-          sss_incidence_sf_v2,
-          sss_incidence_sf_v3) %>%
+          sss_mortality_sf_v2,
+          sss_mortality_sf_v3) %>%
     mutate(sex = ifelse(grepl('_female_', analysis_title), 'Female', 'Male')) %>%
     st_drop_geometry
 
@@ -520,7 +547,7 @@ sss_mortality_sf %>%
 
 # Sensitivity analysis
 ## Sensitivity (LISA)
-```{r LISA plot, fig.width = 9, fig.height = 6}
+```{r LISA plot, fig.width = 7.8, fig.height = 6}
 lisa_incidence_sf = extr_lisa_sf(covar_origin_00_fc, covar_origin_05_fc, covar_origin_10_fc, "ragest_i_*.*male*")
 lisa_mortality_sf = extr_lisa_sf(covar_origin_00_fc, covar_origin_05_fc, covar_origin_10_fc, "ragest_d_*.*male*")
 # load(str_c(rdsdir, "Output/LISA_integrated_sf_091522.RData"))
@@ -532,11 +559,12 @@ lisa_incidence_sf = lisa_incidence_sf %>%
     filter(!sgg_cd_c %in% c(23320, 37430, 39010, 39020))
 lisa_mortality_sf = lisa_mortality_sf %>%
     filter(!sgg_cd_c %in% c(23320, 37430, 39010, 39020))
-
+levels_cancersex = c("Lung (Male)", "Stomach (Male)", "Stomach (Female)")
 
 lisa_incidence_sf %>%
     filter(cancer != "Lung" | !grepl('_female_', analysis_title)) %>%
     mutate(cancersex = ifelse(grepl("_male_", analysis_title), str_c(cancer, " (Male)"), str_c(cancer, " (Female)"))) %>%
+    mutate(cancersex = factor(cancersex, levels = levels_cancersex)) %>%
     # filter(!(cancer == "Lung" & grepl('(female)', analysis_title))) %>%
     tm_shape(.) +
         tm_fill('LISA', title = "Local Moran's I", pal = colpal, showNA = FALSE, colorNA = "white", labels = namepal) +
@@ -554,6 +582,7 @@ lisa_incidence_sf %>%
 lisa_mortality_sf %>%
     filter(cancer != "Lung" | !grepl('_female_', analysis_title)) %>%
     mutate(cancersex = ifelse(grepl("_male_", analysis_title), str_c(cancer, " (Male)"), str_c(cancer, " (Female)"))) %>%
+    mutate(cancersex = factor(cancersex, levels = levels_cancersex)) %>%
     # filter(!(cancer == "Lung" & grepl('(female)', analysis_title))) %>%
     tm_shape(.) +
         tm_fill('LISA', title = "Local Moran's I", pal = colpal, showNA = FALSE, colorNA = "white", labels = namepal) +
@@ -573,7 +602,7 @@ lisa_mortality_sf %>%
 
 ## Sensitivity (Poisson)
 
-```{r sensitivity plot Poisson, fig.width = 9, fig.height = 6}
+```{r sensitivity plot Poisson, fig.width = 7.8, fig.height = 6}
 
 p_v0_reslp = clear_input(filepath = str_c(rdsdir, "satscan_NPois_uncontrolled_resid.rds"))
 p_va_reslp = clear_input(filepath = str_c(rdsdir, "satscan_NPois_age_resid.rds"))

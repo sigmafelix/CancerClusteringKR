@@ -708,8 +708,12 @@ generate_satscan_prm = function(data,
             indx.pop = grep(col.est, dcols.new)
             line.popmap = str_c("PopulationFile-SourceFieldMap=", indx.idcol, ",unspecifiedPopDate,", indx.pop)
         }
+        covar_vec = dcols.new[grep(string_search_n, dcols.new)]
+    } else {
+        covar_vec = ""
     }
     
+    print(covar_vec)
     # print(fullpath.input)
     # print(fullpath.output)
     # print(indx.idcol)
@@ -1081,9 +1085,9 @@ EmailAttachResults=n
 
 [Elliptic Scan]
 ;elliptic shapes - one value for each ellipse (comma separated decimal values)
-EllipseShapes=1.5,2,2.5,3,4,5
+EllipseShapes=1,1.5,2,2.5,3,4,5
 ;elliptic angles - one value for each ellipse (comma separated integer values)
-EllipseAngles=4,6,8,9,12,15
+EllipseAngles=1,4,6,8,9,12,15
 
 [Power Simulations]
 ;simulation methods (0=Null Randomization, 1=N/A, 2=File Import)
@@ -1097,7 +1101,7 @@ SimulatedDataOutputFilename=
 
 [Run Options]
 ;number of parallel processes to execute (0=All Processors, x=At Most X Processors)
-NumberParallelProcesses=8
+NumberParallelProcesses=12
 ;suppressing warnings? (y/n)
 SuppressWarnings=n
 ;log analysis run to history file? (y/n)
@@ -1128,7 +1132,7 @@ Version=10.1.0\\n',
     cat(xml_analysis_block)
     sink()
 
-    system(str_c("/home/felix/SaTScan/SaTScanBatch64 ", prm.path))
+    system(str_c("/home/felix/SaTScan/SaTScanBatch64 ", prm.path), intern=T)
     cat(str_c("Remove the artifacts of the current analysis...\n"))
     #file.copy(prm.path, str_c(dir.base, title.analysis, ".prm"))
     file.remove(prm.path)
@@ -1156,7 +1160,8 @@ Version=10.1.0\\n',
     colnames(tss) = cn
     tss = tss %>% 
         mutate(analysis_title = title.analysis,
-                locid_lst = list(locid_extr)) %>%
+                locid_lst = list(locid_extr),
+                covar_lst = list(covar_vec)) %>%
         dplyr::select(analysis_title, 1:(ncol(.)))
     
     cat(str_glue("Modeltype={modeltype} ({dist.info})\nTarget variable={col.var}\nFile written:{fullpath.temp}\n",
@@ -1447,16 +1452,19 @@ df_satscan_primary = function(basemap, sats, threshold = 2,
         sats[1,] %>%
             split(., .$cluster) %>%
             lapply(function(x) {
-                    ellps = satscanres_to_sf(x, data_exact)
-                    st_crs(ellps) = st_crs(basemap)
-                    ellps_prime = ellps[1,]
-                    centrds = st_centroid(basemap, of_largest_polygon = TRUE)
-                    ellps_centr = as.vector(st_intersects(centrds, ellps_prime, sparse = F))
-                    print(sum(ellps_centr))
-                    print(sats$number_locs[1])
-                    stopifnot("SaTScan results do not match the geometric operation results.\n" =sats$number_locs[1] == sum(ellps_centr))
+                    # x$locid_lst
+                    # ellps = satscanres_to_sf(x, data_exact)
+                    # st_crs(ellps) = st_crs(basemap)
+                    # ellps_prime = ellps[1,]
+                    # centrds = st_centroid(basemap, of_largest_polygon = TRUE)
+                    # ellps_centr = as.vector(st_intersects(centrds, ellps_prime, sparse = F))
+                    # print(sum(ellps_centr))
+                    # print(sats$number_locs[1])
+                    # stopifnot("SaTScan results do not match the geometric operation results.\n" =sats$number_locs[1] == sum(ellps_centr))
                     basemap_cls = basemap %>%
-                        mutate(prim_cluster = as.factor(ellps_centr)) %>%
+                        # added 110722: explicitly referring to the locids from satscan outputs
+                        mutate(prim_cluster = as.factor(ifelse(sgg_cd_c %in% x$locid_lst[[1]], TRUE, FALSE))) %>%
+                        # mutate(prim_cluster = as.factor(ellps_centr)) %>%
                         mutate(nflag = str_c("N=", sum(prim_cluster == "TRUE")))
                     return(basemap_cls)
             })

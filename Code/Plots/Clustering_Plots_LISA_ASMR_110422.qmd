@@ -1,7 +1,7 @@
 ---
 title: "Stomach and lung cancer incidence/mortality clustering results"
 author: "Insang Song"
-date: 10-27-2022
+date: 11-07-2022
 theme: "spacelab"
 format: 
   html:
@@ -25,6 +25,8 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
     - 10/26/2022
         - Double sensitivity: variable order, education-only in M1
         - Added labels of the number of districts 
+    - 11/07/2022
+        - Directly converted SaTScan outputs into sggid lists then referring to it for plotting
 
 
 ```{r}
@@ -176,7 +178,7 @@ extr_sss_sf = function(fc, resl, flag = "_i_") {
 ```
 
 
-```{r}
+```{r ellipse test, include=F, eval=F}
 packed = c(37370, 38400, 22310, 22070, 22030, 37380, 37390, 22050, 22040, 22010,
                           38310, 22060, 22020, 38330, 37310, 38370, 38390, 37050, 38030, 37100,
                           37030, 37320, 38320, 38360, 38380, 37360, 38060, 37070, 36060, 38080,

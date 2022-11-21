@@ -1139,9 +1139,14 @@ Version=10.1.0\\n',
         cn = c('cluster', 'locid', 'x', 'y', 'minor', 'major', 'angle', 'shape',
                'start_date', 'end_date', 'number_locs', 'LLR', 'stat_test', 'pvalue', 'obs', 'ex', 'obsoverex', 'RR', 'pop', 'GINI')
     } else if (modeltype == 5) {
-        dist.info = "Weighted normal"
+        dist.info = "Normal"
         cn = c('cluster', 'locid', 'x', 'y', 'minor', 'major', 'angle', 'shape',
-               'start_date', 'end_date', 'number_locs', 'LLR', 'stat_test', 'pvalue', 'observed', 'weight_in', 'mean_in', 'mean_out', 'variance', 'std', 'w_mean_in', 'w_mean_out', 'w_variance', 'w_std', 'GINI')
+                'start_date', 'end_date', 'number_locs', 'LLR', 'stat_test', 'pvalue', 'observed', 'mean_in', 'mean_out', 'variance', 'std', "GINI")
+        if (weighted) {
+            dist.info = "Weighted normal"
+            cn = c('cluster', 'locid', 'x', 'y', 'minor', 'major', 'angle', 'shape',
+                'start_date', 'end_date', 'number_locs', 'LLR', 'stat_test', 'pvalue', 'observed', 'weight_in', 'mean_in', 'mean_out', 'variance', 'std', 'w_mean_in', 'w_mean_out', 'w_variance', 'w_std', 'GINI')
+        }
     }
     tss = read_fwf(str_c(dir.target, title.analysis, ".col.txt"), skip = 1)
     colnames(tss) = cn

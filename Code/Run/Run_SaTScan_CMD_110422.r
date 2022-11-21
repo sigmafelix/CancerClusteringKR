@@ -1,6 +1,6 @@
 ### SaTScan standalone batch
 ### June 22, 2022
-### Last revised Oct 27, 2022
+### Last revised Nov 4, 2022
 ### Insang Song (sigmafelix@hotmail.com)
 
 
@@ -187,158 +187,6 @@ p13_all_va_df = bind_rows(p1_all_va_df, p2_all_va_df) %>%
 write_rds(p13_all_va_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_ASMR_age_resid.rds")
 
 
-# Covariate control (excl. age in M1: educ) ####
-# run for the period 1 (normal) ####
-p1_all_ve = mapply(function(x, y) {
-    generate_satscan_prm(data = dat1,
-                    title.analysis = str_c(y, 've'),
-                    dir.base = dbase, dir.target = "/home/felix/workcache/", name.idcol = geoid,
-                    filename.input = "satscan_base_data_period1.csv",
-                    filename.output = str_c(str_c(y, 've'), ".txt"),
-                    col.var = x,
-                    col.case = x,
-                    prm.path = "/home/felix/Documents/test.prm",
-                    adjust = TRUE,
-                    vset = "educ")
-}, all_models$basename[indx_p1], all_models$modeltitle[indx_p1], SIMPLIFY = FALSE)
-
-p1_all_ve_df = Reduce(rbind, p1_all_ve)
-
-# run for the period 2 (normal) ####
-p2_all_ve = mapply(function(x, y) {
-    generate_satscan_prm(data = dat2,
-                    title.analysis = str_c(y, 've'),
-                    dir.base = dbase, dir.target = "/home/felix/workcache/", name.idcol = geoid,
-                    filename.input = "satscan_base_data_period2.csv",
-                    filename.output = str_c(str_c(y, 've'), ".txt"),
-                    col.var = x,
-                    col.case = x,
-                    prm.path = "/home/felix/Documents/test.prm",
-                    adjust = TRUE,
-                    vset = 'educ'
-                    )
-}, all_models$basename[indx_p2], all_models$modeltitle[indx_p2], SIMPLIFY = FALSE)
-
-p2_all_ve_df = Reduce(rbind, p2_all_ve)
-
-# run for the period 3 (normal) ####
-p3_all_ve = mapply(function(x, y) {
-    generate_satscan_prm(data = dat3,
-                    title.analysis = str_c(y, 've'),
-                    dir.base = dbase, dir.target = "/home/felix/workcache/", name.idcol = geoid,
-                    filename.input = "satscan_base_data_period3.csv",
-                    filename.output = str_c(str_c(y, 've'), ".txt"),
-                    col.var = x,
-                    col.case = x,
-                    prm.path = "/home/felix/Documents/test.prm",
-                    adjust = TRUE,
-                    vset = 'educ'
-                    )
-}, all_models$basename[indx_p3], all_models$modeltitle[indx_p3], SIMPLIFY = FALSE)
-
-p3_all_ve_df = Reduce(rbind, p3_all_ve)
-
-p13_all_ve_df = bind_rows(p1_all_ve_df, p2_all_ve_df) %>%
-    bind_rows(p3_all_ve_df)
-write_rds(p13_all_ve_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_ASMR_educ_resid.rds")
-
-
-# Covariate control (environmental variables only) ####
-# run for the period 1 (normal) ####
-p1_all_ven = mapply(function(x, y) {
-    generate_satscan_prm(data = dat1,
-                    title.analysis = str_c(y, 'ven'),
-                    dir.base = dbase, dir.target = "/home/felix/workcache/", name.idcol = geoid,
-                    filename.input = "satscan_base_data_period1.csv",
-                    filename.output = str_c(str_c(y, 'ven'), ".txt"),
-                    col.var = x,
-                    col.case = x,
-                    prm.path = "/home/felix/Documents/test.prm",
-                    adjust = TRUE,
-                    vset = "environ")
-}, all_models$basename[indx_p1], all_models$modeltitle[indx_p1], SIMPLIFY = FALSE)
-
-p1_all_ven_df = Reduce(rbind, p1_all_ven)
-
-# run for the period 2 (normal) ####
-p2_all_ven = mapply(function(x, y) {
-    generate_satscan_prm(data = dat2,
-                    title.analysis = str_c(y, 'ven'),
-                    dir.base = dbase, dir.target = "/home/felix/workcache/", name.idcol = geoid,
-                    filename.input = "satscan_base_data_period2.csv",
-                    filename.output = str_c(str_c(y, 'ven'), ".txt"),
-                    col.var = x,
-                    col.case = x,
-                    prm.path = "/home/felix/Documents/test.prm",
-                    adjust = TRUE,
-                    vset = 'environ'
-                    )
-}, all_models$basename[indx_p2], all_models$modeltitle[indx_p2], SIMPLIFY = FALSE)
-
-p2_all_ven_df = Reduce(rbind, p2_all_ven)
-
-# run for the period 3 (normal) ####
-p3_all_ven = mapply(function(x, y) {
-    generate_satscan_prm(data = dat3,
-                    title.analysis = str_c(y, 'ven'),
-                    dir.base = dbase, dir.target = "/home/felix/workcache/", name.idcol = geoid,
-                    filename.input = "satscan_base_data_period3.csv",
-                    filename.output = str_c(str_c(y, 'ven'), ".txt"),
-                    col.var = x,
-                    col.case = x,
-                    prm.path = "/home/felix/Documents/test.prm",
-                    adjust = TRUE,
-                    vset = 'environ'
-                    )
-}, all_models$basename[indx_p3], all_models$modeltitle[indx_p3], SIMPLIFY = FALSE)
-
-p3_all_ven_df = Reduce(rbind, p3_all_ven)
-
-p13_all_ven_df = bind_rows(p1_all_ven_df, p2_all_ven_df) %>%
-    bind_rows(p3_all_ven_df)
-write_rds(p13_all_ven_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_ASMR_environ_resid.rds")
-
-
-
-# Covariate control (behavioral variables only) ####
-# run for the period 2 (normal) ####
-p2_all_veb = mapply(function(x, y) {
-    generate_satscan_prm(data = dat2,
-                    title.analysis = str_c(y, 'veb'),
-                    dir.base = dbase, dir.target = "/home/felix/workcache/", name.idcol = geoid,
-                    filename.input = "satscan_base_data_period2.csv",
-                    filename.output = str_c(str_c(y, 'veb'), ".txt"),
-                    col.var = x,
-                    col.case = x,
-                    prm.path = "/home/felix/Documents/test.prm",
-                    adjust = TRUE,
-                    vset = 'behav'
-                    )
-}, all_models$basename[indx_p2], all_models$modeltitle[indx_p2], SIMPLIFY = FALSE)
-
-p2_all_veb_df = Reduce(rbind, p2_all_veb)
-
-# run for the period 3 (normal) ####
-p3_all_veb = mapply(function(x, y) {
-    generate_satscan_prm(data = dat3,
-                    title.analysis = str_c(y, 'veb'),
-                    dir.base = dbase, dir.target = "/home/felix/workcache/", name.idcol = geoid,
-                    filename.input = "satscan_base_data_period3.csv",
-                    filename.output = str_c(str_c(y, 'veb'), ".txt"),
-                    col.var = x,
-                    col.case = x,
-                    prm.path = "/home/felix/Documents/test.prm",
-                    adjust = TRUE,
-                    vset = 'behav'
-                    )
-}, all_models$basename[indx_p3], all_models$modeltitle[indx_p3], SIMPLIFY = FALSE)
-
-p3_all_veb_df = Reduce(rbind, p3_all_veb)
-
-p13_all_veb_df = bind_rows(p2_all_veb_df, p3_all_veb_df)
-write_rds(p13_all_veb_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_ASMR_behavior_resid.rds")
-
-
 # Covariate control (Model 2: variable set 1) ####
 # run for the period 1 (normal) ####
 p1_all_v1 = mapply(function(x, y) {
@@ -396,21 +244,22 @@ write_rds(p13_all_v1_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satsca
 
 
 ## Covariate control (Model 3: variable set 2) ####
+## Due to the definition change in sets 2-3, p1 is excluded from M3 analysis
 # run for the period 1 (normal) ####
-p1_all_v2 = mapply(function(x, y) {
-    generate_satscan_prm(data = dat1,
-                    title.analysis = str_c(y, 'v2'),
-                    dir.base = dbase, dir.target = "/home/felix/workcache/", name.idcol = geoid,
-                    filename.input = "satscan_base_data_period1.csv",
-                    filename.output = str_c(str_c(y, 'v2'), ".txt"),
-                    col.var = x,
-                    col.case = x,
-                    prm.path = "/home/felix/Documents/test.prm",
-                    adjust = TRUE,
-                    vset = "set2")
-}, all_models$basename[indx_p1], all_models$modeltitle[indx_p1], SIMPLIFY = FALSE)
+# p1_all_v2 = mapply(function(x, y) {
+#     generate_satscan_prm(data = dat1,
+#                     title.analysis = str_c(y, 'v2'),
+#                     dir.base = dbase, dir.target = "/home/felix/workcache/", name.idcol = geoid,
+#                     filename.input = "satscan_base_data_period1.csv",
+#                     filename.output = str_c(str_c(y, 'v2'), ".txt"),
+#                     col.var = x,
+#                     col.case = x,
+#                     prm.path = "/home/felix/Documents/test.prm",
+#                     adjust = TRUE,
+#                     vset = "set2")
+# }, all_models$basename[indx_p1], all_models$modeltitle[indx_p1], SIMPLIFY = FALSE)
 
-p1_all_v2_df = Reduce(rbind, p1_all_v2)
+# p1_all_v2_df = Reduce(rbind, p1_all_v2)
 
 # run for the period 2 (normal) ####
 p2_all_v2 = mapply(function(x, y) {
@@ -446,13 +295,30 @@ p3_all_v2 = mapply(function(x, y) {
 
 p3_all_v2_df = Reduce(rbind, p3_all_v2)
 
-p13_all_v2_df = bind_rows(p1_all_v2_df, p2_all_v2_df) %>%
-    bind_rows(p3_all_v2_df)
-write_rds(p13_all_v2_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_ASMR_vset2_resid.rds")
+p23_all_v2_df = bind_rows(p2_all_v2_df, p3_all_v2_df)
+write_rds(p23_all_v2_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_ASMR_vset2_resid.rds")
 
 
 ## Covariate control (Model 4: variable set 3) ####
+## Warning: sets 2-3 (M3-M4) def were switched!!!
+## p1 is restored in M4 analysis
 # run for the period 2 (normal) ####
+p1_all_v3 = mapply(function(x, y) {
+    generate_satscan_prm(data = dat1,
+                    title.analysis = str_c(y, 'v3'),
+                    dir.base = dbase, dir.target = "/home/felix/workcache/", name.idcol = geoid,
+                    filename.input = "satscan_base_data_period1.csv",
+                    filename.output = str_c(str_c(y, 'v3'), ".txt"),
+                    col.var = x,
+                    col.case = x,
+                    prm.path = "/home/felix/Documents/test.prm",
+                    adjust = TRUE,
+                    vset = 'set3'
+                    )
+}, all_models$basename[indx_p1], all_models$modeltitle[indx_p1], SIMPLIFY = FALSE)
+
+p1_all_v3_df = Reduce(rbind, p1_all_v3)
+
 p2_all_v3 = mapply(function(x, y) {
     generate_satscan_prm(data = dat2,
                     title.analysis = str_c(y, 'v3'),
@@ -486,8 +352,11 @@ p3_all_v3 = mapply(function(x, y) {
 
 p3_all_v3_df = Reduce(rbind, p3_all_v3)
 
-p13_all_v3_df = bind_rows(p2_all_v3_df, p3_all_v3_df)
+p13_all_v3_df = bind_rows(p1_all_v3_df, p2_all_v3_df) %>%
+    bind_rows(p3_all_v3_df)
 write_rds(p13_all_v3_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/satscan_ASMR_vset3_resid.rds")
+
+
 
 ## Covariate control (Model 5: variable set 4) ####
 # run for the period 3 (normal) ####

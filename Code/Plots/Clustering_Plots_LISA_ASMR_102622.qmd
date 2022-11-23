@@ -35,7 +35,7 @@ if (!require(pacman)) { install.packages('pacman') }
 p_load(tidyverse, sf, stars, raster, starsExtra, readxl, here, tmap, stargazer, smerc, DClusterm, kableExtra, patchwork, rmapshaper, spdep)
 
 dirpattern = "/mnt/c/Users/%s/"
-username = 'isong'
+username = 'sigma'
 basedir = sprintf(dirpattern, username)
 rdatafiles = list.files(path = str_c(basedir, 'Documents/GP/'), pattern = '*.RData', full.names = TRUE)
 geopath = str_c(basedir, "OneDrive/Data/Korea/")
@@ -102,6 +102,10 @@ p_load(corrplot)
 # y
 yvec_i = c("ragest_i_Lung_male_", "ragest_i_Stomach_male_", "ragest_i_Stomach_female_")
 yvec_d = c("ragest_d_Lung_male_", "ragest_d_Stomach_male_", "ragest_d_Stomach_female_")
+yvec_p1 = c(str_c(yvec_i, 1), str_c(yvec_d, 1))
+yvec_p2 = c(str_c(yvec_i, 2), str_c(yvec_d, 2))
+yvec_p3 = c(str_c(yvec_i, 3), str_c(yvec_d, 3))
+
 plabs = str_c("Period ", 1:3)
 
 ## ypairs
@@ -185,14 +189,26 @@ ggcorr_multi(fcs, yvec_ism, xvec_m1, xvec_m2, "ASIR\n(Stomach, Male)", xvec_lab1
              rdsdir, "Corrplot_Stomach_Male_inc_112022.png")
 ggcorr_multi(fcs, yvec_isf, xvec_m1, xvec_m2, "ASIR\n(Stomach, Female)", xvec_lab1, xvec_lab2, plabs,
              rdsdir, "Corrplot_Stomach_Female_inc_112022.png")
-ggcorr_multi(fcs, yvec_ilm, xvec_m1, xvec_m2, "ASMR\n(Lung, Male)", xvec_lab1, xvec_lab2, plabs,
+ggcorr_multi(fcs, yvec_mlm, xvec_m1, xvec_m2, "ASMR\n(Lung, Male)", xvec_lab1, xvec_lab2, plabs,
              rdsdir, "Corrplot_Lung_Male_mor_112022.png")
-ggcorr_multi(fcs, yvec_ism, xvec_m1, xvec_m2, "ASMR\n(Stomach, Male)", xvec_lab1, xvec_lab2, plabs,
+ggcorr_multi(fcs, yvec_msm, xvec_m1, xvec_m2, "ASMR\n(Stomach, Male)", xvec_lab1, xvec_lab2, plabs,
              rdsdir, "Corrplot_Stomach_Male_mor_112022.png")
-ggcorr_multi(fcs, yvec_isf, xvec_m1, xvec_m2, "ASMR\n(Stomach, Female)", xvec_lab1, xvec_lab2, plabs,
+ggcorr_multi(fcs, yvec_msf, xvec_m1, xvec_m2, "ASMR\n(Stomach, Female)", xvec_lab1, xvec_lab2, plabs,
              rdsdir, "Corrplot_Stomach_Female_mor_112022.png")
 
+ylab_all = 
+c("ASIR\n(Lung, Male)", "ASIR\n(Stomach, Male)", "ASIR\n(Stomach, Female)", 
+"ASMR\n(Lung, Male)", "ASMR\n(Stomach, Male)", "ASMR\n(Stomach, Female)")
 
+
+png(filename = str_c(rdsdir, "Manuscript/Total_corrplot_112122.png"), 
+        width = 12, height = 12, units = 'in', pointsize = 10, res = 508,
+        type = "cairo-png")
+par(mfcol = c(2, 2))
+corr_single(fcs[[1]], yvec_p1, xvec_m1, ylab_all, xvec_lab1, 'Period 1')
+corr_single(fcs[[2]], yvec_p2, xvec_m2, ylab_all, xvec_lab2, 'Period 2')
+corr_single(fcs[[3]], yvec_p3, xvec_m2, ylab_all, xvec_lab2, 'Period 3')
+dev.off()
 
 ```
 

@@ -674,6 +674,12 @@ generate_satscan_prm = function(data,
                     set1 = str_c('^p_*.*_', sex_t, '$'),
                     set2 = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_(walking|obesity|alcoholmonth|smoking)', sep = '|'), #old: (?!physmid)
                     set3 = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_(walking|obesity|alcoholmonth|smoking)', '^ap_', '^NDVI_', sep = '|'),
+                    set3_ndvi = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_(walking|obesity|alcoholmonth|smoking)', '^NDVI_', sep = '|'),
+                    set3_appred = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_(walking|obesity|alcoholmonth|smoking)', '^ap_NO2', '^ap_PM10', sep = '|'),
+                    set3_apsum = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_(walking|obesity|alcoholmonth|smoking)', '^ap_sum_', sep = '|'),
+                    set3_nondvi = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_(walking|obesity|alcoholmonth|smoking)', '^ap_', sep = '|'),
+                    set3_noappred = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_(walking|obesity|alcoholmonth|smoking)', '^ap_sum_', '^NDVI_', sep = '|'),
+                    set3_noapsum = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_(walking|obesity|alcoholmonth|smoking)', '^ap_NO2', '^ap_PM10', '^NDVI_', sep = '|'),
                     set4 = str_c(str_c('^p_*.*_', sex_t, '$'), '^r_(walking|obesity|alcoholmonth|smoking)', '^n_pw', '^ap_', '^NDVI_', sep = '|'))
         
         if (!is.null(add_var)) {

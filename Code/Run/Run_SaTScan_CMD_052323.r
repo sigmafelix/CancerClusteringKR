@@ -599,3 +599,39 @@ p13_all_noapsum_df = bind_rows(p1_all_noapsum_df, p2_all_noapsum_df, p3_all_noap
 write_rds(p13_all_nondvi_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/SaTScan_Results/satscan_ASMR_nondvi_resid.rds")
 write_rds(p13_all_noappred_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/SaTScan_Results/satscan_ASMR_noappred_resid.rds")
 write_rds(p13_all_noapsum_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/SaTScan_Results/satscan_ASMR_noapsum_resid.rds")
+
+
+
+## M3 + alpha
+p1_all_ndvi = run_satscan(dat1, "satscan_base_data_period1.csv", vset="set3_ndvi", indices = indx_p1)
+p1_all_appred = run_satscan(dat1, "satscan_base_data_period1.csv", vset="set3_appred", indices = indx_p1)
+p1_all_apsum = run_satscan(dat1, "satscan_base_data_period1.csv", vset="set3_apsum", indices = indx_p1)
+
+p2_all_ndvi = run_satscan(dat2, "satscan_base_data_period2.csv", vset="set3_ndvi", indices = indx_p2)
+p2_all_appred = run_satscan(dat2, "satscan_base_data_period2.csv", vset="set3_appred", indices = indx_p2)
+p2_all_apsum = run_satscan(dat2, "satscan_base_data_period2.csv", vset="set3_apsum", indices = indx_p2)
+
+p3_all_ndvi = run_satscan(dat3, "satscan_base_data_period3.csv", vset="set3_ndvi", indices = indx_p3)
+p3_all_appred = run_satscan(dat3, "satscan_base_data_period3.csv", vset="set3_appred", indices = indx_p3)
+p3_all_apsum = run_satscan(dat3, "satscan_base_data_period3.csv", vset="set3_apsum", indices = indx_p3)
+
+
+p1_all_ndvi_df = Reduce(rbind, p1_all_ndvi)
+p1_all_appred_df = Reduce(rbind, p1_all_appred)
+p1_all_apsum_df = Reduce(rbind, p1_all_apsum)
+
+p2_all_ndvi_df = Reduce(rbind, p2_all_ndvi)
+p2_all_appred_df = Reduce(rbind, p2_all_appred)
+p2_all_apsum_df = Reduce(rbind, p2_all_apsum)
+
+p3_all_ndvi_df = Reduce(rbind, p3_all_ndvi)
+p3_all_appred_df = Reduce(rbind, p3_all_appred)
+p3_all_apsum_df = Reduce(rbind, p3_all_apsum)
+
+p13_all_ndvi_df = bind_rows(p1_all_ndvi_df, p2_all_ndvi_df, p3_all_ndvi_df)
+p13_all_appred_df = bind_rows(p1_all_appred_df, p2_all_appred_df, p3_all_appred_df)
+p13_all_apsum_df = bind_rows(p1_all_apsum_df, p2_all_apsum_df, p3_all_apsum_df)
+
+write_rds(p13_all_ndvi_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/SaTScan_Results/satscan_ASMR_M3ndvi_resid.rds")
+write_rds(p13_all_appred_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/SaTScan_Results/satscan_ASMR_M3appred_resid.rds")
+write_rds(p13_all_apsum_df, cldir %s% "OneDrive/NCC_Project/CancerClustering/SaTScan_Results/satscan_ASMR_M3apsum_resid.rds")

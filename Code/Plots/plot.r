@@ -4,8 +4,8 @@ if (!require(pacman)) { install.packages('pacman') ; library(pacman)}
 
 p_load(tidyverse, sf, stars, raster, starsExtra, readxl, here, tmap, stargazer, smerc, DClusterm, kableExtra, patchwork, rmapshaper, spdep)
 
-dirpattern = "/mnt/c/Users/%s/"
-username = 'sigma'
+dirpattern = "/home/%s/"
+username = 'felix'
 basedir = sprintf(dirpattern, username)
 rdatafiles = list.files(path = str_c(basedir, 'Documents/GP/'), pattern = '*.RData', full.names = TRUE)
 geopath = str_c(basedir, "OneDrive/Data/Korea/")
@@ -14,7 +14,7 @@ geopath = str_c(basedir, "OneDrive/Data/Korea/")
 dbdir = drive  
 rdsdir = drive #sprintf("/mnt/c/Users/%s/OneDrive/NCC_Project/CancerClustering/", username)
 
-
+sf_use_s2(F)
 
 load(str_c(drive, '/Manuscript/Clustering_Base_sf_091522.RData'))
 
@@ -48,8 +48,11 @@ target_sdname = c("Seoul (Capital)", "Busan", "Daegu", "Incheon", "Gwangju", "Da
         "North Jeolla", "South Jeolla", "North Gyeongsang", "South Gyeongsang")
 
 covar_origin_10_fcc = covar_origin_10_fc %>%
-    filter(!sgg_cd_c %in% c(23320, 37430, 39010, 39020)) %>%
-    ms_simplify(keep = 0.1, keep_shapes = TRUE)
+    dplyr::filter(!sgg_cd_c %in% c(23320, 37430, 39010, 39020)) %>%
+    sf::st_cast("MULTIPOLYGON") %>%
+    sf::st_buffer(0)
+covar_origin_10_fcc = # %>%
+    rmapshaper::ms_simplify(input = covar_origin_10_fcc, keep = 0.5, keep_shapes = TRUE)
 covar_origin_10_fcc = covar_origin_10_fcc %>%
     mutate(sdcd = str_sub(sgg_cd_c, 1, 2)) %>%
     mutate(sdname = plyr::mapvalues(sdcd, unique(sdcd),
@@ -73,6 +76,7 @@ covar_origin_10_fccc = covar_origin_10_fcc %>%
     st_centroid
 covar_origin_10_fccc$geom[[9]] = covar_origin_10_fccc$geom[[9]] + c(3e3, -2e4)
 
+geodata::geodata_path("./Data/")
 prk = geodata::gadm("PRK", 0)
 prksf = prk %>%
     st_as_sf %>%
@@ -83,7 +87,9 @@ ggisf = kor %>%
     st_transform("EPSG:5179") %>%
     filter(NAME_1 == "Gyeonggi-do")
 
-prkgsf = st_read("/mnt/c/Users/sigma/Documents/PRKG_SF.gpkg")
+sdb = read_sf("/home/felix/OneDrive/NCC_Project/CancerClustering/Data/SD_boundaries.gpkg")
+# prkgsf = st_read("/mnt/c/Users/sigma/Documents/PRKG_SF.gpkg")
+prkgsf = prksf
 
 tm_sido = 
     tm_shape(covar_origin_10_fcc) +
@@ -103,12 +109,14 @@ tm_sido =
                   panel.label.size = 1.4,
                   fontfamily = "Pretendard",
                   outer.margins = c(0.005, 0.005, 0.005, 0.005)) +
+    tm_shape(sdb) +
+    tm_lines(col = "black", lwd = 1.5, lty = "solid", alpha = 0.5) +
     tm_shape(korea_metros) +
-    tm_borders("orange", lwd = 1.5) +
+    tm_borders("orange", lwd = 2, alpha = 0.5) +
     tm_shape(covar_origin_10_fccc) +
     tm_text("sdname", size = 1, col = 'black', fontface = 'bold', fontfamily = "Pretendard", shadow = TRUE) 
 
-tmap_save(tm_sido, filename = str_c(drive, "/Manuscript/Provincial_Map_05222023.png"), 
+tmap_save(tm_sido, filename = str_c(drive, "/Manuscript/Provincial_Map_07232023.png"), 
         width = 10, height = 12, units = 'in', dpi = 300)
 
 cofc3= covar_origin_10_fc %>% mutate(period = "2009-2013") %>% st_transform(5179) %>%
@@ -170,9 +178,9 @@ concat_tmaps = function(sfd, cn = 'value', title_custom = "Age standardized rate
 
     mapsep = lapply(split(sfd, sfd$cancerlabel),
     function(k) {
-
+        # Old: PuRd, New: Reds (colorblind safe); 07/23/2023
         tm_shape(k) +
-            tm_fill(cn, n = 5, style = 'quantile', pal = "PuRd",
+            tm_fill(cn, n = 5, style = 'quantile', pal = "Reds",
                     title = title_custom) +
             tm_borders(lwd = 0.05, col = 'grey') +
             tm_facets(c("period", "cancerlabel"), nrow = 3) +
@@ -197,16 +205,16 @@ cofcsmap1 = concat_tmaps(cofcs %>% filter(sex == "Male"), 'value')
 cofcsmap2 = concat_tmaps(cofcs %>% filter(sex == "Female"), 'value',
                 title_custom = "Age standardized rate")
 
-tmap_save(cofcsmap1, filename = str_c(drive, "/Manuscript/ASR_Map_Male3.png"),
+tmap_save(cofcsmap1, filename = str_c(drive, "/Manuscript/ASR_Map_Male_3periods.png"),
         width = 12, height = 15, units = 'in', dpi = 300, pointsize = 16)
-tmap_save(cofcsmap2, filename = str_c(drive, "/Manuscript/ASR_Map_Female3.png"),
+tmap_save(cofcsmap2, filename = str_c(drive, "/Manuscript/ASR_Map_Female_3periods.png"),
         width = 12, height = 15, units = 'in', dpi = 300, pointsize = 16)
 
 
 ## Separate legends
 cofcsmap1e = cofcs %>% filter(sex == "Male") %>%
     tm_shape(.) +
-        tm_fill('value', n = 5, style = 'quantile', pal = "PuRd",
+        tm_fill('value', n = 5, style = 'quantile', pal = "Reds",
                 title = NA) +
         tm_borders(lwd = 0.05, col = 'grey') +
         tm_facets(c("period", "cancerlabel"), ncol = 4, nrow = 3, free.scales.fill = TRUE) +
@@ -227,7 +235,7 @@ cofcsmap1e = cofcs %>% filter(sex == "Male") %>%
             legend.text.size = 0.7)
 cofcsmap2e = cofcs %>% filter(sex == "Female") %>%
     tm_shape(.) +
-        tm_fill('value', n = 5, style = 'quantile', pal = "PuRd",
+        tm_fill('value', n = 5, style = 'quantile', pal = "Reds",
                 title = NA) +
         tm_borders(lwd = 0.05, col = 'grey') +
         tm_facets(c("period", "cancerlabel"), ncol = 4, nrow = 3, free.scales.fill = TRUE) +
@@ -247,9 +255,9 @@ cofcsmap2e = cofcs %>% filter(sex == "Female") %>%
             legend.title.size = 0.01,
             legend.text.size = 0.7)
 
-tmap_save(cofcsmap1e, filename = str_c(drive, "/Manuscript/ASR_Map_Male_seplegend.png"),
+tmap_save(cofcsmap1e, filename = str_c(drive, "/Manuscript/ASR_Map_Male_seplegend_072323.png"),
         width = 15, height = 12, units = 'in', dpi = 300, pointsize = 24)
-tmap_save(cofcsmap2e, filename = str_c(drive, "/Manuscript/ASR_Map_Female_seplegend.png"),
+tmap_save(cofcsmap2e, filename = str_c(drive, "/Manuscript/ASR_Map_Female_seplegend_072323.png"),
         width = 15, height = 12, units = 'in', dpi = 300, pointsize = 24)
 
 
@@ -447,7 +455,7 @@ fulllist_name2 =
 
 # xlab
 xvec_lab1 = c('Senior (male)', 'Senior (female)', '>Bachelor (male)', '>Bachelor (female)', 
-            'PM10_pred', 'NO2_pred',
+            'PM10_ex', 'NO2_ex',
             'Average NDVI', 'CO', 'NOx', 'SOx', 'TSP', 'PM10_em',
             'VOC', 'NH3')
 xvec_lab2 = c('Senior (male)', 'Senior (female)', '>Bachelor (male)', '>Bachelor (female)', 
@@ -484,7 +492,7 @@ c("ASIR (Lung, Male)", "ASIR (Lung, Female)", "ASIR (Stomach, Male)", "ASIR (Sto
 
 
 
-png(filename = str_c(rdsdir, "Manuscript/Total_corrplot_052223.png"), 
+png(filename = str_c(rdsdir, "Manuscript/Total_corrplot_061823.png"), 
         width = 15, height = 15, units = 'in', pointsize = 10, res = 508,
         type = "cairo-png")
 par(mfrow = c(2, 2), mar = c(0.1, 0.1, 0.1, 0.1), mai = rep(0.01, 4))

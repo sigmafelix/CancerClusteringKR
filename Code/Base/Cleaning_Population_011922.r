@@ -7,12 +7,27 @@ if (!require(pacman)) {
 p_load(tidyverse, sf, DCluster, tmap, smerc, knitr, readxl, kableExtra, DClusterm, patchwork)
 p_load(stars, raster, starsExtra, here, stargazer)
 
-username = 'sigma'
-basedir = sprintf('/mnt/c/Users/%s/', username)
-rdatafiles = list.files(path = str_c(basedir, 'Documents/GP/'), pattern = '*.RData', full.names = TRUE)
+osinfo = Sys.info()["sysname"]
+kernel_version = substr(strsplit(Sys.info()["release"], "-")[[1]][1], 1, 1)
+## Assuming that the Linux-only local machine has kernel version >= 6.0.0
+parentdir = ifelse(
+    osinfo != "Linux",
+    "C:/Users/",
+    ifelse(kernel_version == "6",
+        "/home/", "/mnt/c/Users/"))
+        
+project = "P4"
+dirname = switch(project,
+        P4 = "CancerClusteringP4/",
+        P1 = "CancerClustering/")
+
+
+username = 'felix'
+basedir = sprintf('%s%s/', parentdir, username)
+# rdatafiles = list.files(path = str_c(basedir, 'Documents/GP/'), pattern = '*.RData', full.names = TRUE)
 geopath = str_c(basedir, "OneDrive/Data/Korea/")
 #homedir <- "/home/felix/"
-drivebase = str_c(basedir, "OneDrive/NCC_Project/CancerClustering/")
+drivebase = str_c(basedir, "OneDrive/NCC_Project/", dirname)
 drive = str_c(drivebase, "Data/Cancer/")
 drivepop = str_c(drivebase, "Data/Population/")
 geopath = str_c(basedir, "OneDrive/Data/Korea/")
@@ -38,7 +53,7 @@ pop <- read.csv(paste(drivepop, "Midyear_Population_1998_2019.csv", sep = ""), f
 pop_wide = pop %>%
     pivot_wider(names_from = c("sex0", "year"), values_from = population)
 
-colnames(inc) <- c("sex0", "sex", "cancer_type0", "cancer_type", "sgg_cd", "sgg_nm", "year0", "year", "inc0", "type_inc", "unit", "n", "x")
+colnames(inc) <- c("sex0", "sex", "cancer_type0", "cancer_type", "sgg_cd", "sgg_nm", "year0", "year", "inc0", "type_inc", "unit", "n")
 colnames(mor_to) <- c("cause0", "cause", "sgg_cd", "sgg_nm", "sex0", "sex", "type0", "type", "unit", paste("Y", 1998:2019, sep = ""), "x")
 colnames(mor_me) <- c("cause0", "cause", "sgg_cd", "sgg_nm", "sex0", "sex", "type0", "type", "unit", paste("Y", 1998:2019, sep = ""), "x")
 colnames(mor_fe) <- c("cause0", "cause", "sgg_cd", "sgg_nm", "sex0", "sex", "type0", "type", "unit", paste("Y", 1998:2019, sep = ""), "x")
@@ -105,15 +120,15 @@ consolidate_sgg = function(table_target, sp_data = NULL, table_conv, year = NULL
 # mort: join with pop, split N and rates; group_by(sgg_cd, year_agg) then N(sum), rates(mean) pop(sum); 
 #       convert sgg code and group_by(sgg_cd_c) and take sum(N) and weighted mean for rates
 conv_table_e = conv_table %>%
-    filter(to_year >= 1999 & from_year <= 2013) %>%
+    filter(to_year >= 1999 & from_year <= 2018) %>%
     dplyr::select(from_year, to_year, fromcode, tocode)
 
 # pre-aggregated for incidence
 pop_cla = pop %>%
-    filter(year >= 1999 & year <= 2013) %>%
+    filter(year >= 1999 & year <= 2018) %>%
     consolidate_sgg(., table_conv = conv_table_e) %>%
     mutate(sgg_cd = plyr::mapvalues(sgg_cd, conv_table_e$fromcode, conv_table_e$tocode),
-           year_agg = cut(year, breaks = c(1998,2003,2008,2013), labels = c('1999-2003', '2004-2008', '2009-2013'), right = TRUE)) %>%
+           year_agg = cut(year, breaks = c(1998,2003,2008,2013,2018), labels = c('1999-2003', '2004-2008', '2009-2013', '2014-2018'), right = TRUE)) %>%
     group_by(year_agg, sgg_cd, sex0, sex_e) %>%
     summarize(population = sum(population, na.rm = TRUE)) %>%
     ungroup %>%
@@ -121,10 +136,10 @@ pop_cla = pop %>%
 
 # pre-cleaned for mortality
 pop_clm = pop %>%
-    filter(year >= 1999 & year <= 2013) %>%
+    filter(year >= 1999 & year <= 2018) %>%
     consolidate_sgg(., table_conv = conv_table_e) %>%
     mutate(sgg_cd = plyr::mapvalues(sgg_cd, conv_table_e$fromcode, conv_table_e$tocode),
-           year_agg = cut(year, breaks = c(1998,2003,2008,2013), labels = c('1999-2003', '2004-2008', '2009-2013'), right = TRUE)) %>%
+           year_agg = cut(year, breaks = c(1998,2003,2008,2013,2018), labels = c('1999-2003', '2004-2008', '2009-2013', '2014-2018'), right = TRUE)) %>%
     group_by(year, sgg_cd, sex0, sex_e) %>%
     summarize(population = sum(population, na.rm = TRUE)) %>%
     ungroup %>%
@@ -132,15 +147,15 @@ pop_clm = pop %>%
 
 
 inc_clo <- inc %>%
-    filter(n != '-') %>%
+    # filter(n != '-') %>%
     mutate(
         n_n = as.numeric(n),
         n_n = ifelse(is.na(n_n), 0, n_n),
-        cancer_type_e = plyr::mapvalues(cancer_type, unique(cancer_type), c("Stomach", "Colorectal", "Liver", "Lung", "Breast", "Cervical", "Prostate", "Thyroid")),
+        cancer_type_e = plyr::mapvalues(cancer_type, unique(cancer_type), c("Stomach", "Colorectal", "Liver", "Lung", "Thyroid", "Leukemia")),
         sex_e = plyr::mapvalues(sex, unique(sex), c("total", "male", "female")),
         type_inc_e = plyr::mapvalues(type_inc, unique(type_inc), c("n", "r_crude", "r_agest"))
     ) %>%
-    filter(cancer_type_e %in% c('Stomach', 'Lung')) %>%
+    filter(cancer_type_e %in% c('Stomach', 'Lung', "Colorectal", "Thyroid")) %>%
     consolidate_sgg(., table_conv = conv_table_e) %>%
     mutate(sgg_cd_c = plyr::mapvalues(sgg_cd, conv_table_e$fromcode, conv_table_e$tocode)) %>%
     left_join(pop_cla, by = c('year' = 'year_agg', 'sgg_cd_c' = 'sgg_cd', 'sex_e' = 'sex_e')) %>%
@@ -237,13 +252,13 @@ mor_clo = bind_rows(mor_to, mor_me) %>%
     bind_rows(mor_fe) %>%
     pivot_longer(cols = Y1998:Y2019) %>%
     mutate(year = as.integer(str_sub(name, 2, 5))) %>%
-    filter(year >= 1999 & year <= 2013) %>%
-    mutate(year_agg = cut(year, breaks = c(1998,2003,2008,2013), labels = c('1999-2003', '2004-2008', '2009-2013'), right = TRUE),
+    filter(year >= 1999 & year <= 2018) %>%
+    mutate(year_agg = cut(year, breaks = c(1998,2003,2008,2013,2018), labels = c('1999-2003', '2004-2008', '2009-2013', '2014-2018'), right = TRUE),
            cancer_type_e = plyr::mapvalues(cause, unique(cause), c("Stomach", "Colorectal", "Liver", "Lung", "Breast", "Cervical/Uterine", "Prostate")),
            sex_e = plyr::mapvalues(sex, unique(sex), c('total', 'male', 'female')),
            type_mor_e = plyr::mapvalues(type0, c('T1', 'T4', 'T7'), c('n', 'r_crude', 'r_agest'))
         )  %>%
-    filter(cancer_type_e %in% c('Stomach', 'Lung')) %>%
+    filter(cancer_type_e %in% c('Stomach', 'Lung', 'Colorectal', 'Thyroid')) %>%
     group_by(sgg_cd, sex_e, cancer_type_e, type_mor_e, year, name) %>%
     filter(sum(value) != 0) %>%
     ungroup %>%
@@ -275,7 +290,7 @@ mor_cln = mor_clo %>%
     group_by(year_agg, sgg_cd_c, cancer_type_e, sex_e) %>%
     summarize(n_n = sum(n, na.rm = T)) %>%
     ungroup %>%
-    filter(year_agg %in% c('1999-2003', '2004-2008', '2009-2013')) %>%
+    filter(year_agg %in% c('1999-2003', '2004-2008', '2009-2013', '2014-2018')) %>%
     # pivot_longer(cols = 5, values_to = 'n_n', names_to = 'type_mor_e')
     mutate(type_mor_e = 'n')
 
@@ -473,7 +488,11 @@ morinc_clw = mor_clw %>%
     # Ulleung-gun period 2 incidence fix (012222)
     mutate(n_i_Lung_female_2 = ifelse(sgg_cd_c == 37430, 3, n_i_Lung_female_2)) 
 
+saveRDS(morinc_clw, file = str_c(drivebase, "base_data_period4_pop_cancer.rds"))
 
+
+
+## Post-hoc fix
 load(str_c("/mnt/c/Users/sigma/OneDrive/NCC_Project/CancerClustering", '/Manuscript/Clustering_Base_sf_062422.RData'))
 
 fix_covar_fc = function(cfc, period, indf) {

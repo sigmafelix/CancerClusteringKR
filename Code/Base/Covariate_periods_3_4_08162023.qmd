@@ -1,0 +1,208 @@
+---
+title: "Covariate clearing: 2009-2018"
+author: "Insang Song"
+date: 08-16-2023
+theme: "spacelab"
+output:
+  html_document:
+    embed-resources: true
+    toc: true
+    fig_caption: true
+---
+
+```{r}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+```{r filesystem setting}
+options(repos = "https://cran.seoul.go.kr/")
+if (!require(pacman)) {
+    install.packages("pacman")
+}
+p_load(tidyverse, sf, DCluster, tmap, smerc, knitr, readxl, kableExtra, DClusterm, patchwork)
+p_load(stars, raster, starsExtra, here, stargazer)
+
+osinfo = Sys.info()["sysname"]
+kernel_version = substr(strsplit(Sys.info()["release"], "-")[[1]][1], 1, 1)
+## Assuming that the Linux-only local machine has kernel version >= 6.0.0
+parentdir = ifelse(
+    osinfo != "Linux",
+    "C:/Users/",
+    ifelse(kernel_version == "6",
+        "/home/", "/mnt/c/Users/"))
+        
+project = "P4"
+dirname = switch(project,
+        P4 = "CancerClusteringP4/",
+        P1 = "CancerClustering/")
+
+
+username = 'felix'
+basedir = sprintf('%s%s/', parentdir, username)
+geopath = str_c(basedir, "OneDrive/Data/Korea/")
+projdir = str_c(basedir, "OneDrive/NCC_Project/", dirname)
+datadir = str_c(basedir, "OneDrive/NCC_Project/", dirname, "Data/")
+
+```
+
+## Definition
+- Five-year average of age-standardized rate
+    - Drinking, smoking: long table (omit the first line)
+    - Walking, obesity: wide table
+
+
+## Clean behavioral
+```{r behav read}
+behavs = list.files(pattern = "*_2008_2022.csv$",
+                    path = str_c(datadir, "Behavior"),
+                    full.names = TRUE)
+behavs
+
+
+## No 2019
+behavs_w = behavs[c(1, 3)] |>
+    lapply(function(x) read.csv(x, skip = 0, header = TRUE, fileEncoding = "EUC-KR")) |>
+    lapply(function(x) as_tibble(x))
+behavs_l = behavs[c(2, 4)] |>
+    lapply(function(x) read.csv(x, skip = 1, header = TRUE, fileEncoding = "EUC-KR")) |>
+    lapply(function(x) as_tibble(x))
+
+head_w = c("sido", "sigungu_cd", "sigungu_nm", "item_cd", "item", "unit", 2008:2022)
+head_l = c("sido", "sido_cd", "sigungu_cdnm", "vclass", 
+            paste(rep(c("n_response_", "r_crude_", "r_crude_se_", "r_agest_", "r_agest_se_"), 1), rep(c(2008:2018, 2020:2022), each = 5), sep = ""))
+# 1:59 for walking,
+# all for obesity
+drink = behavs_w[[1]]
+smoke = behavs_w[[2]]
+obesity = behavs_l[[1]]
+walking = behavs_l[[2]]
+
+colnames(drink) = colnames(smoke) = head_w
+colnames(obesity) = head_l
+colnames(walking) = head_l[1:59]
+
+```
+
+
+```{r behav wide clean}
+obesity_l = obesity |>
+    rowwise() |>
+    mutate(sigungu_nm = str_extract_all(sigungu_cdnm, "[가-힣]{1,30}")[[1]],
+           sigungu_nm2 = str_extract_all(trimws(vclass), "[가-힣]{1,30}")[[1]][1]) |>
+    ungroup() |>
+    mutate(sigungu_nm = ifelse(sigungu_nm2 == "소계", sigungu_nm, sigungu_nm2)) |>
+    pivot_longer(cols = n_response_2008:r_agest_se_2022) |>
+    rowwise() |>
+    mutate(year = as.integer(str_extract_all(name, "\\d{1,4}")[[1]])) |>
+    ungroup() |>
+    mutate(period = cut(year, c(2007, 2013, 2018, 2023), right = TRUE, labels = 3:5)) |>
+    rename(item_cd = name) |>
+    mutate(item_cd = str_replace_all(item_cd, "_\\d{1,4}", "")) |>
+    group_by(sido, sigungu_nm, period, item_cd) |>
+    summarize(avg_value = mean(value, na.rm = TRUE)) |>
+    ungroup() 
+
+
+walking_l = walking |>
+    rowwise() |>
+    mutate(sigungu_nm = str_extract_all(sigungu_cdnm, "[가-힣]{1,30}")[[1]],
+           sigungu_nm2 = str_extract_all(vclass, "[가-힣]{1,30}")[[1]][1]) |>
+    ungroup() |>
+    mutate(sigungu_nm = ifelse(sigungu_nm2 == "소계", sigungu_nm, sigungu_nm2)) |>
+    pivot_longer(cols = n_response_2008:r_agest_se_2018) |>
+    rowwise() |>
+    mutate(year = as.integer(str_extract_all(name, "\\d{1,4}")[[1]])) |>
+    ungroup() |>
+    mutate(period = cut(year, c(2007, 2013, 2018, 2023), right = TRUE, labels = 3:5)) |>
+    rename(item_cd = name) |>
+    mutate(item_cd = str_replace_all(item_cd, "_\\d{1,4}", "")) |>
+    group_by(sido, sigungu_nm, period, item_cd) |>
+    summarize(avg_value = mean(value, na.rm = TRUE)) |>
+    ungroup() 
+
+
+```
+
+
+```{r behav long clean}
+drink_l = drink |>
+    mutate(item_cd = str_replace_all(item_cd, "(\\[14STD04553\\]|\\[14STD00018\\])", ""),
+           item_cd = plyr::mapvalues(item_cd, c("N", "CR", "CR_SE", "SR", "SR_SE"),
+                        c("n_response", "r_crude", "r_crude_se", "r_agest", "r_agest_se"))) |>
+    pivot_longer(cols = `2008`:`2022`) |>
+    mutate(year = as.integer(name),
+           period = cut(year, c(2007, 2013, 2018, 2023), right = TRUE, labels = 3:5)) |>
+    group_by(sido, sigungu_nm, period, item_cd) |>
+    summarize(avg_value = mean(value, na.rm = TRUE)) |>
+    ungroup()
+
+
+smoke_l = smoke |>
+    mutate(item_cd = str_replace_all(item_cd, "(\\[14STD04553\\]|\\[14STD00018\\])", ""),
+           item_cd = plyr::mapvalues(item_cd, c("N", "CR", "CR_SE", "SR", "SR_SE"),
+                        c("n_response", "r_crude", "r_crude_se", "r_agest", "r_agest_se"))) |>
+    pivot_longer(cols = `2008`:`2022`) |>
+    mutate(year = as.integer(name),
+           period = cut(year, c(2007, 2013, 2018, 2023), right = TRUE, labels = 3:5)) |>
+    group_by(sido, sigungu_nm, period, item_cd) |>
+    summarize(avg_value = mean(value, na.rm = TRUE)) |>
+    ungroup() 
+
+```
+
+## Clean physical
+```{r physical}
+em2010 = readRDS(str_c(datadir, "Airpollution/emission_2010_terra.rds")) |>
+    terra::unwrap()
+names(em2010)[2:3] = c("NOx", "SOx")
+
+em2015 = readRDS(str_c(datadir, "Airpollution/emission_2015_terra.rds")) |>
+    terra::unwrap()
+
+ap2010 = read_csv(str_c(datadir, "Airpollution/2010_new.csv"), locale = locale(encoding = "EUC-KR"))
+ap2015 = read_csv(str_c(datadir, "Airpollution/2015_new.csv"), locale = locale(encoding = "EUC-KR"))
+
+# ap2010, 2015 weighted conversion...
+ap2010_w = ap2010 # ...
+ap2015_w = ap2015 # ... 
+
+# em 2010, ap 2010, etc. extract and join
+sgg_em2010 = terra::extract(em2010, sgg_poly, fun = "mean") 
+sgg_em2015 = terra::extract(em2015, sgg_poly, fun = "mean")
+sgg_ap2010 = left_join()
+sgg_ap2015 = left_join()
+
+```
+
+## Clean screening
+```{r, screening}
+screening = read_csv(str_c(datadir, "Screening/CancerScreening_2011_2020.csv"), locale = locale(encoding = "EUC-KR"))
+
+colnames(screening) = c("sigungu_internal", "sido", "sigungu_nm", "sex0", "sex", "cancertype0", "cancertype", "item_cd", "item", "unit", 2010:2020)
+
+screening %>% dplyr::select(cancertype0, cancertype) %>% unique
+
+screening_l = screening |>
+    mutate(cancertype = plyr::mapvalues(cancertype0, c(2,3,4,5,7), 
+    c("Stomach", "Colorectal", "Liver", "Breast", "Lung")),
+           sex = plyr::mapvalues(sex0, c(1,2,3), c("total", "male", "female"))) |>
+    pivot_longer(cols = `2010`:`2020`) |>
+    mutate(period = cut(as.integer(name), c(2007, 2013, 2018, 2023), right = TRUE, labels = 3:5)) |>
+    group_by(sido, sigungu_nm, sex, cancertype, period, item) |>
+    summarize(value = sum(value, na.rm = TRUE)) |>
+    ungroup() |>
+    group_by(sido, sigungu_nm, sex, cancertype, period) |>
+    summarize(r_screening = 100 * value[2] / value[1]) |>
+    ungroup()
+
+```
+
+
+## Population and Cancer outcomes
+```{r}
+pop_clw = readRDS(str_c(datadir, "Population/base_data_period4_pop_cancer.rds"))
+
+```
+
+
+
